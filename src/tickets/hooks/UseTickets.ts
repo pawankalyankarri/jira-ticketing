@@ -64,13 +64,18 @@ interface CreateTicketCommentType {
   comment_text: string;
   attachment_path: string;
 }
+interface EditTicketCommentType {
+  comment_id: number,
+  commented_by: number,
+  comment_text: string,
+  attachment_path:string ,
+  edited: boolean
+}
 
 interface TicketCollaboratorsType {
   ticket_id: string;
-  user_id: string;
+  user_id: string[];
 }
-
-
 
 export const UseTickets = () => {
   const [tickets, setTickets] = useState<TicketType[]>([]);
@@ -227,6 +232,43 @@ export const UseTickets = () => {
     [fetchAllTickets]
   );
 
+  const EditTicket = useCallback(
+    async (
+      data: TicketUpdateFormDataType,
+      fileObject: File[],
+      tktId: string
+    ) => {
+      console.log("data", data);
+      setLoading(true);
+      try {
+        data.file_attachment.length === 0 ? data.file_attachment.push("") : "";
+        const response = await axios.post("/api/ticketing/update-ticket", data);
+        console.log("edittkt", response);
+        // await fetchAllTickets()
+
+        console.log("data", data);
+        console.log("tktid", tktId, fileObject);
+        if (fileObject.length !== 0) {
+          const res = await axios.post(
+            "/api/ticketing/attach-file",
+            { ticket_id: tktId, uploadfile: fileObject[0] },
+            {
+              headers: { "Content-Type": "multipart/form-data" },
+            }
+          );
+
+          console.log("fileres", res);
+        }
+        return response;
+      } catch (err) {
+        console.log("edittkt", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchAllTickets]
+  );
+
   const GetTicket = useCallback(
     async (tktId: string) => {
       if (mountRef.current) return;
@@ -300,20 +342,51 @@ export const UseTickets = () => {
     []
   );
 
-  const GetTicketAllCollaborators = useCallback(async(data: { ticket_id: string })=>{
+  const EditTicketComment = useCallback(async(data:EditTicketCommentType)=>{
     try{
-      const res = await axios.post("/api/ticket-collaborators/get-collabs",data)
-      if(res.data.status){
-        return res.data.data
-      }else{
-        console.log('getTicketcollaborators',res)
-      }
-      
+      const res = await axios.post("/api/ticket-comment/update-comment",data)
+      console.log(res)
+      return res.data
     }
     catch(err){
-      console.log('GetTicketAllCollaborators',err)
+      console.log("EditTicketComment",err)
     }
-  },[])
+  },[GetTicketComments])
+
+  const DeleteTicketComment = useCallback(
+    async (data: { comment_id: string }) => {
+      try {
+        const res = await axios.post(
+          "/api/ticket-comment/delete-comment",
+          data
+        );
+        console.log("res", res);
+        return res.data;
+      } catch (err) {
+        console.log("DeleteTicketComment", err);
+      }
+    },
+    [GetTicketComments]
+  );
+
+  const GetTicketAllCollaborators = useCallback(
+    async (data: { ticket_id: string }) => {
+      try {
+        const res = await axios.post(
+          "/api/ticket-collaborators/get-collabs",
+          data
+        );
+        if (res.data.status) {
+          return res.data.data;
+        } else {
+          console.log("getTicketcollaborators", res);
+        }
+      } catch (err) {
+        console.log("GetTicketAllCollaborators", err);
+      }
+    },
+    []
+  );
 
   const CreateTicketCollaborators = useCallback(
     async (data: TicketCollaboratorsType) => {
@@ -322,7 +395,7 @@ export const UseTickets = () => {
           "/api/ticket-collaborators/create-collabs",
           data
         );
-        return res
+        return res.data;
       } catch (err) {
         console.log("TicketCollaborators", err);
       }
@@ -330,42 +403,16 @@ export const UseTickets = () => {
     []
   );
 
-  const EditTicket = useCallback(
-    async (
-      data: TicketUpdateFormDataType,
-      fileObject: File[],
-      tktId: string
-    ) => {
-      console.log("data", data);
-      setLoading(true);
-      try {
-        data.file_attachment.length === 0 ? data.file_attachment.push("") : "";
-        const response = await axios.post("/api/ticketing/update-ticket", data);
-        console.log("edittkt", response);
-        // await fetchAllTickets()
-
-        console.log("data", data);
-        console.log("tktid", tktId, fileObject);
-        if (fileObject.length !== 0) {
-          const res = await axios.post(
-            "/api/ticketing/attach-file",
-            { ticket_id: tktId, uploadfile: fileObject[0] },
-            {
-              headers: { "Content-Type": "multipart/form-data" },
-            }
-          );
-
-          console.log("fileres", res);
-        }
-        return response;
-      } catch (err) {
-        console.log("edittkt", err);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [fetchAllTickets]
-  );
+  const RemoveTicketCollaborator = useCallback(async(data:TicketCollaboratorsType)=>{
+    try{
+      const res = await axios.post("/api/ticket-collaborators/delete-collabss",data)
+      console.log('res',res)
+      return res.data
+    }
+    catch(err){
+      console.log("UpdateTicketCollaborators",err)
+    }
+  },[])
 
   return {
     tickets,
@@ -381,7 +428,10 @@ export const UseTickets = () => {
     GetTicketHistory,
     GetTicketComments,
     CreateTicketComment,
-    CreateTicketCollaborators,
+    EditTicketComment,
+    DeleteTicketComment,
     GetTicketAllCollaborators,
+    CreateTicketCollaborators,
+    RemoveTicketCollaborator,
   };
 };

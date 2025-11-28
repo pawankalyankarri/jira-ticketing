@@ -66,15 +66,24 @@ export interface TicketHistoryDetailsType {
 }
 
 export interface UsersDataType {
-  phone_number: string,
-      role: string,
-      id: number,
-      updated_at: string,
-      email: string,
-      last_name: string,
-      first_name: string,
-      password_hash: string,
-      is_active: boolean,
-      created_at: string,
-      entity_id: any,
+  phone_number: string;
+  role: string;
+  id: number;
+  updated_at: string;
+  email: string;
+  last_name: string;
+  first_name: string;
+  password_hash: string;
+  is_active: boolean;
+  created_at: string;
+  entity_id: any;
+}
+
+export interface TicketCollaboratorsDataType {
+  id: number;
+  created_at: string;
+  updated_at: string;
+  entity_id: string;
+  ticket_id: number;
+  user_id: number;
 }

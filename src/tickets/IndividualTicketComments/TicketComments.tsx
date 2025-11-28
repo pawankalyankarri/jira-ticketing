@@ -15,6 +15,7 @@ import {
   Italic,
   List,
   ListOrdered,
+  Rss,
   Smile,
   Strikethrough,
 } from "lucide-react";
@@ -25,6 +26,8 @@ import { useEffect, useRef, useState } from "react";
 import Placeholder from "@tiptap/extension-placeholder";
 import { cn } from "@/lib/utils";
 import { UseTickets } from "../hooks/UseTickets";
+import { toast } from "sonner";
+import type { UsersDataType } from "../ticketInterfaces/TicketInterfaces";
 
 interface CommentsType {
   ticket_id: number;
@@ -35,6 +38,7 @@ interface CommentsType {
   created_at: string;
   updated_at: string;
   entity_id: any;
+  edited: boolean;
 }
 
 interface ToolbarButtonProps {
@@ -44,16 +48,23 @@ interface ToolbarButtonProps {
 }
 interface TicketCommentsProps {
   tktid: string;
+  usersData: UsersDataType[];
 }
 
-const TicketCommnets = ({ tktid }: TicketCommentsProps) => {
+const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<number | null>(null);
   const [editContent, setEditContent] = useState<string>("");
   const [comments, setComments] = useState<CommentsType[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const textareaRef = useRef<HTMLDivElement | null>(null);
 
-  const { GetTicketComments, CreateTicketComment } = UseTickets();
+  const {
+    GetTicketComments,
+    CreateTicketComment,
+    DeleteTicketComment,
+    EditTicketComment,
+  } = UseTickets();
 
   const editor = useEditor({
     extensions: [
@@ -63,20 +74,19 @@ const TicketCommnets = ({ tktid }: TicketCommentsProps) => {
     ],
     content: "",
   });
-
+  const allComments = async () => {
+    const response = await GetTicketComments({ ticket_id: String(tktid) });
+    console.log("comments", response);
+    if (response.status) {
+      setComments(response.data.data);
+      setLoading(false);
+    }
+  };
   useEffect(() => {
-    const allComments = async () => {
-      console.log("tktid", tktid);
-      const response = await GetTicketComments({ ticket_id: String(tktid) });
-      console.log("comments", response);
-      if (response.status) {
-        setComments(response.data.data);
-      }
-    };
     allComments();
   }, []);
 
-  console.log("comments", comments);
+  // console.log("comments", comments);
 
   // function ToolbarButton({ editor, command, label }: ToolbarButtonProps) {
   //   const isActive = () => {
@@ -116,7 +126,7 @@ const TicketCommnets = ({ tktid }: TicketCommentsProps) => {
     const seconds = Math.floor(diff / 1000);
     const minutes = Math.floor(diff / 1000 / 60);
     const hours = Math.floor(diff / 1000 / 60 / 60);
-    const days = Math.floor(diff / 1000 / 60 / 24);
+    const days = Math.floor(diff / 1000 / 60 /60/ 24);
 
     if (days > 7) {
       return date.toLocaleDateString("en-US", {
@@ -169,11 +179,8 @@ const TicketCommnets = ({ tktid }: TicketCommentsProps) => {
 
     console.log("response", response);
     if (response.status) {
-      const response = await GetTicketComments({ ticket_id: String(tktid) });
-      console.log("comments", response);
-      if (response.status) {
-        setComments(response.data.data);
-      }
+      setLoading(true);
+      await allComments();
     }
 
     // setComments((prev) => [...prev, comment]);
@@ -181,8 +188,15 @@ const TicketCommnets = ({ tktid }: TicketCommentsProps) => {
     setIsFocused(false);
   };
 
-  const handleDeleteComment = (id: number) => {
-    setComments(comments.filter((comment) => comment.id !== id));
+  const handleDeleteComment = async (id: string) => {
+    console.log("id", id);
+    const res = await DeleteTicketComment({ comment_id: id });
+    console.log("res", res);
+    if (res.status) {
+      setComments((prev) => prev.filter((c) => String(c.id) !== id));
+    } else {
+      toast.error(res.message);
+    }
   };
 
   const htmlToText = (html: string) => {
@@ -207,20 +221,38 @@ const TicketCommnets = ({ tktid }: TicketCommentsProps) => {
   //   setIsEditing(comment.id);
   // };
 
-  const handleSaveEditComment = (id: number) => {
+  const handleSaveEditComment = async (id: number) => {
     if (!editContent) return;
-    setComments((prev) =>
-      prev.map((c) =>
-        c.id == id
-          ? {
-              ...c,
-              content: editContent,
-              edited: c.comment_text !== editContent,
-            }
-          : c
-      )
-    );
-    setIsEditing(null), setEditContent("");
+
+    const editedComment = {
+      comment_id: id,
+      commented_by: 1,
+      comment_text: editContent,
+      attachment_path: "",
+      edited: true,
+    };
+
+    const res = await EditTicketComment(editedComment);
+    console.log("edited", res);
+    if (res.status) {
+      setLoading(true);
+      setIsEditing(null), setEditContent("");
+      await allComments();
+    } else {
+      toast.error(res.message);
+    }
+
+    // setComments((prev) =>
+    //   prev.map((c) =>
+    //     c.id == id
+    //       ? {
+    //           ...c,
+    //           content: editContent,
+    //           edited: c.comment_text !== editContent,
+    //         }
+    //       : c
+    //   )
+    // );
   };
 
   const adjustTextareaHeight = (textareaRef: HTMLElement | null) => {
@@ -403,7 +435,6 @@ const TicketCommnets = ({ tktid }: TicketCommentsProps) => {
                   className=" bg-gray-100 hover:bg-bg-gray-100 text-gray-500 w-fit font-bold cursor-pointer"
                   onClick={() => {
                     setIsFocused(false);
-                   
                   }}
                 >
                   Cancel
@@ -428,99 +459,105 @@ const TicketCommnets = ({ tktid }: TicketCommentsProps) => {
         <h4 className="font-bold pl-5 capitalize">
           Comments ({comments.length})
         </h4>
-        {[...comments].reverse().map((comment: CommentsType) => {
-          return (
-            <div
-              className="flex gap-3 px-2 justify-center items-center"
-              key={comment.id}
-            >
-              <div className="flex flex-col items-end">
-                <span className="">
-                  <Clock size={16} />
-                </span>
-                <span className="w-8 h-8 rounded-full bg-blue-600 flex justify-center items-center text-white uppercase font-bold shrink-0 text-sm">
-                  {comment.commented_by}
-                </span>
-              </div>
+        {loading ? (
+          <div className="text-center font-bold">Loading...</div>
+        ) : comments.length === 0 ? (
+          <div className="text-center"> No comments</div>
+        ) : (
+          [...comments].reverse().map((comment: CommentsType) => {
+            const user = usersData.find((u) => u.id === comment.commented_by);
+            if (!user) return;
+            // console.log('user',user)
+            return (
+              <div
+                className="flex gap-3 px-2 justify-center items-center"
+                key={comment.id}
+              >
+                <div className="flex flex-col items-end">
+                  <span className="">
+                    <Clock size={16} />
+                  </span>
+                  <span className="w-8 h-8 rounded-full bg-blue-600 flex justify-center items-center text-white uppercase font-bold shrink-0 text-sm">
+                    {user.first_name.trim() === ""
+                      ? user.email[0]
+                      : `${user.first_name[0]}${user.last_name[0]}`}
+                  </span>
+                </div>
 
-              <div className="flex-1">
-                <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex justify-center items-center">
-                      <span className="text-gray-900 text-sm capitalize">
-                        {comment.commented_by}
-                      </span>
-                      <span className="text-gray-500 ml-2 text-xs flex gap-1 justify-center items-center">
-                        <span>{formatTimestamp(comment.updated_at)}</span>
-                        {/* <span>{comment.edited && "(edited)"}</span> */}
-                      </span>
-                    </div>
-                    <div className="flex gap-1">
-                      <span
-                        className="text-xs text-gray-500 hover:text-blue-500 px-2 py-2 cursor-pointer "
-                        onClick={() => handleEditComment(comment.id)}
-                      >
-                        Edit
-                      </span>
-                      <span
-                        className="text-xs text-gray-500 hover:text-red-500 px-2 py-2 cursor-pointer"
-                        onClick={() => handleDeleteComment(comment.id)}
-                      >
-                        Delete
-                      </span>
-                    </div>
-                  </div>
-                  {isEditing === comment.id ? (
-                    <div>
-                      <textarea
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        className="w-full resize-none border border-gray-300 rounded px-3 py-2 focus:border-blue-500 focus:outline-none min-h-20"
-                        autoFocus
-                      />
-
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          className=""
-                          variant={"outline"}
-                          onClick={() => handleSaveEditComment(comment.id)}
+                <div className="flex-1">
+                  <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex justify-center items-center">
+                        <span className="text-gray-900 text-sm capitalize font-bold">
+                          {user.first_name.trim() === ""
+                            ? user.email
+                            : `${user.first_name} ${user.last_name}`}
+                        </span>
+                        <span className="text-gray-500 ml-2 text-xs flex gap-1 justify-center items-center">
+                          <span>{formatTimestamp(comment.updated_at)}</span>
+                          <span>{comment.edited && "(edited)"}</span>
+                        </span>
+                      </div>
+                      <div className="flex gap-1">
+                        <span
+                          className="text-xs text-gray-500 hover:text-blue-500 px-2 py-2 cursor-pointer "
+                          onClick={() => handleEditComment(comment.id)}
                         >
-                          Save
-                        </Button>
-                        <Button
-                          className=""
-                          variant={"outline"}
-                          onClick={() => {
-                            setIsEditing(null);
-                            setEditContent("");
-                          }}
+                          Edit
+                        </span>
+                        <span
+                          className="text-xs text-gray-500 hover:text-red-500 px-2 py-2 cursor-pointer"
+                          onClick={() =>
+                            handleDeleteComment(String(comment.id))
+                          }
                         >
-                          Cancel
-                        </Button>
+                          Delete
+                        </span>
                       </div>
                     </div>
-                  ) : (
-                    // <p className=" text-bg-gray-600  whitespace-pre-wrap">
-                    //   {comment.content}
-                    // </p>
-                    <div
-                      className="px-1  rounded text-bg-gray-600  whitespace-pre-wrap"
-                      dangerouslySetInnerHTML={{ __html: comment.comment_text }}
-                    />
-                  )}
+                    {isEditing === comment.id ? (
+                      <div>
+                        <textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="w-full resize-none border border-gray-300 rounded px-3 py-2 focus:border-blue-500 focus:outline-none min-h-20"
+                          autoFocus
+                        />
+
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            className=""
+                            variant={"outline"}
+                            onClick={() => handleSaveEditComment(comment.id)}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            className=""
+                            variant={"outline"}
+                            onClick={() => {
+                              setIsEditing(null);
+                              setEditContent("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="px-1  rounded text-bg-gray-600  whitespace-pre-wrap"
+                        dangerouslySetInnerHTML={{
+                          __html: comment.comment_text,
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-
-        {/* {comments.map((comment, index) => (
-          <div
-            key={index}
-            className="p-2 border rounded bg-gray-50"
-            dangerouslySetInnerHTML={{ __html: comment.content }}
-          />
-        ))} */}
+            );
+          })
+        )}
       </div>
     </motion.div>
   );

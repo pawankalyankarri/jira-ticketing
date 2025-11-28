@@ -75,7 +75,7 @@
 import { Card } from "@/components/ui/card";
 import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
-import type { TicketType } from "./hooks/UseTickets";
+import { UseTickets, type TicketType } from "./hooks/UseTickets";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCalendar,
@@ -86,15 +86,27 @@ import {
 import ShowSpecifiedTickets from "./ShowSpecifiedTickets";
 import { motion } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 
 interface ColumnTypeProp {
   column: string;
   tickets: TicketType[];
   activeId?: string | null;
+  gridCols: boolean;
 }
 
-const DisplayTicket = ({ column, tickets, activeId }: ColumnTypeProp) => {
+const DisplayTicket = ({
+  column,
+  tickets,
+  activeId,
+  gridCols,
+}: ColumnTypeProp) => {
   const [activeColumn, setActiveColumn] = useState<string>("");
   const [newTodo, setNewTodo] = useState<string>("");
   const { setNodeRef, isOver } = useDroppable({
@@ -102,9 +114,33 @@ const DisplayTicket = ({ column, tickets, activeId }: ColumnTypeProp) => {
   });
   const textareaRef = useRef<HTMLDivElement>(null);
 
-  function handleKeydown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  const { CreateTicket } = UseTickets();
+
+  async function handleKeydown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key !== "Enter") {
       return;
+    }
+    const newTicket = {
+      project_id: "",
+      board_id: "",
+      workflow_id: "",
+      status_id: "",
+      ticket_status: "Open",
+      ticket_state: activeColumn,
+      ticket_severity: "Medium",
+      summary: newTodo,
+      description: "",
+      file_attachment: [],
+      comment: "",
+      start_date: null,
+      end_date: null,
+      assignee_id: "",
+      reporter_id: "",
+    };
+    const res = await CreateTicket({ data: newTicket, files: [] });
+    console.log("ticket created", res);
+    if (res?.status === 200) {
+      window.dispatchEvent(new Event("ticketsUpdated"));
     }
 
     console.log(newTodo, activeColumn);
@@ -179,20 +215,21 @@ const DisplayTicket = ({ column, tickets, activeId }: ColumnTypeProp) => {
         </div>
       </Card>
       <div className="flex flex-col h-[calc(100%-60px)] p-1 overflow-auto thin-scrollbar gap-1">
-        <div className="w-full px-2">
-          {activeColumn === column && (
-            <div
-              className="bg-white rounded-md border-2 border-blue-500 min-h-28 "
-              ref={textareaRef}
-            >
-              <Textarea
-                className="resize-none border-0 outline-0 min-h-28 max-h-28 overflow-y-auto thin-scrollbar1 "
-                value={newTodo}
-                onChange={(e) => setNewTodo(e.target.value)}
-                onKeyDown={handleKeydown}
-              />
+        {gridCols && (
+          <div className="w-full px-2">
+            {activeColumn === column && (
+              <div
+                className="bg-white rounded-md border-2 border-blue-500 min-h-28 "
+                ref={textareaRef}
+              >
+                <Textarea
+                  className="resize-none border-0 outline-0 min-h-28 max-h-28 overflow-y-auto thin-scrollbar1 "
+                  value={newTodo}
+                  onChange={(e) => setNewTodo(e.target.value)}
+                  onKeyDown={handleKeydown}
+                />
 
-              {/* <div className="w-full flex justify-start gap-3 p-2">
+                {/* <div className="w-full flex justify-start gap-3 p-2">
                 <span></span>
                 <span>
                   <FontAwesomeIcon
@@ -205,9 +242,10 @@ const DisplayTicket = ({ column, tickets, activeId }: ColumnTypeProp) => {
                   <FontAwesomeIcon icon={faCircleUser} className="text-gray-500 cursor-pointer" size="xl" />
                 </span>
               </div> */}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
         {tickets
           .filter((item) => String(item.id) !== String(activeId)) // hide the card being dragged
           .map((item: TicketType) => {

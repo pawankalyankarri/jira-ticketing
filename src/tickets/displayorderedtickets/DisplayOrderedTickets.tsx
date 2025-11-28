@@ -50,10 +50,10 @@ const DisplayOrderedTickets = ({ allTickets }: DisplayOrderedTicketsProps) => {
                 <TableCell className=" text-right flex gap-2 items-center">
                   <Avatar>
                     <AvatarFallback className="uppercase font-bold bg-blue-950 text-md text-white ">
-                      {tkt.assignee[0]}
+                      {tkt.assignee_id[0]}
                     </AvatarFallback>
                   </Avatar>
-                  {tkt.assignee}
+                  {tkt.assignee_id}
                 </TableCell>
               </TableRow>
             );

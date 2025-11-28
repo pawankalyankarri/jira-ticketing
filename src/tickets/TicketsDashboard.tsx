@@ -208,7 +208,7 @@ const TicketsDashboard = () => {
           )}
         >
           {gridCols ? (
-            <DisplayOrderedTickets allTickets={allTickets} />
+            <DisplayOrderedTickets allTickets={allTickets}  />
           ) : (
             <DndContext
               sensors={sensors}
@@ -225,6 +225,7 @@ const TicketsDashboard = () => {
                     column={column}
                     activeId={activeId}
                     tickets={columnTickets}
+                    gridCols={gridCols}
                   />
                 );
               })}

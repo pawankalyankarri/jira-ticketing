@@ -57,7 +57,11 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Progress } from "@/components/ui/progress";
-import type { TicketHistoryDetailsType, UsersDataType } from "../ticketInterfaces/TicketInterfaces";
+import type {
+  TicketCollaboratorsDataType,
+  TicketHistoryDetailsType,
+  UsersDataType,
+} from "../ticketInterfaces/TicketInterfaces";
 import { BoardWorkflowAPI } from "@/UserProfile/boardWorkflowAPI/BoardWorkflowAPI";
 
 const OpenTicket = () => {
@@ -69,15 +73,23 @@ const OpenTicket = () => {
   const [createdTimeStr, setCreatedTimeStr] = useState<String>("");
   const [open, setOpen] = useState<boolean>(true);
   const [collabsOpen, setCollabsOpen] = useState<boolean>(true);
-  const [collaborators, setCollaborators] = useState<string[]>([]);
+  const [collaborators, setCollaborators] = useState<
+    TicketCollaboratorsDataType[]
+  >([]);
   const [showSelectCollabs, setShowSelectCollabs] = useState<boolean>(false);
   const [showSubTaskInput, setShowSubTaskInput] = useState<boolean>(false);
   const [assigneedetails, setAssigneeDetails] = useState<string>("");
-  const [usersData,setUsersData] = useState<UsersDataType[]>([])
+  const [usersData, setUsersData] = useState<UsersDataType[]>([]);
 
   const navigate = useNavigate();
-  const { GetTicket, GetTicketHistory,CreateTicketCollaborators,GetTicketAllCollaborators } = UseTickets();
-  const {GetUsers} = BoardWorkflowAPI()
+  const {
+    GetTicket,
+    GetTicketHistory,
+    CreateTicketCollaborators,
+    GetTicketAllCollaborators,
+    RemoveTicketCollaborator
+  } = UseTickets();
+  const { GetUsers } = BoardWorkflowAPI();
   const params = useParams();
 
   // const ticketStateData = [
@@ -103,24 +115,19 @@ const OpenTicket = () => {
             setTicketHistoryDetails(tktHistory.data.data);
           }
           console.log("tktHistory", tktHistory);
-          
+
           setAssigneeDetails(response.assignee_id);
-          const usersRes = await GetUsers()
-          console.log('usersres',usersRes)
-          setUsersData(usersRes.data)
-
-          const collabsres = await GetTicketAllCollaborators({ticket_id : String(params.id)})
-          console.log('collabsres',collabsres)
-
-          
-         
+          const usersRes = await GetUsers();
+          console.log("usersres", usersRes);
+          setUsersData(usersRes.data);
+          await GetAllCollaborators();
         }
       };
       fetch();
     }
   }, []);
   console.log("ticketdetails", ticketDetails);
-  console.log("tkthistorydetails", ticketHistoryDetails.reverse());
+  // console.log("tkthistorydetails", ticketHistoryDetails.reverse());
 
   useEffect(() => {
     if (ticketDetails) {
@@ -143,6 +150,49 @@ const OpenTicket = () => {
     }
   }, [ticketDetails]);
 
+  async function GetAllCollaborators() {
+    const collabsres = await GetTicketAllCollaborators({
+      ticket_id: String(params.id),
+    });
+    console.log("collabsres", collabsres);
+    setCollaborators(collabsres.data);
+  }
+
+  const handleSelect = async (item:UsersDataType) => {
+    const isSelected = collaborators.some((c) => c.user_id === item.id);
+
+    if (isSelected) {
+      setCollaborators((prev) => prev.filter((c) => c.user_id !== item.id));
+    } else {
+      setCollaborators((prev: any) => [...prev, { user_id: item.id }]);
+    }
+
+    try {
+      if (!isSelected) {
+        await CreateTicketCollaborators({
+          ticket_id: String(params.id),
+          user_id: [String(item.id)],
+        });
+      } else {
+        await RemoveTicketCollaborator({
+          ticket_id: String(params.id),
+          user_id: [String(item.id)],
+        });
+      }
+    } catch (err) {
+      console.error('selecting adding or deleting collaborators',err);
+
+      setCollaborators((prev: any) => {
+        if (isSelected) {
+          return [...prev, { user_id: item.id }];
+        } else {
+          return prev.filter((c: any) => c.user_id !== item.id);
+        }
+      });
+    }
+    console.log("collabs after select",collaborators)
+  };
+
   const formatTimeAgo = (dateStr: string) => {
     const now = new Date();
     const date = new Date(dateStr);
@@ -164,7 +214,7 @@ const OpenTicket = () => {
     if (days >= 1) return `${days} day${days > 1 ? "s" : ""} ago`;
     if (hours >= 1) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
     if (minutes >= 1) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-    if (seconds >= 1) return `${seconds} second ${seconds > 1 ? "s" : ""} ago`;
+    if (seconds >= 1) return `${seconds} second${seconds > 1 ? "s" : ""} ago`;
   };
 
   function formattedDate(dateStr: string) {
@@ -396,14 +446,15 @@ const OpenTicket = () => {
                               </TabsTrigger>
                             </TabsList>
                             <TabsContent value="all">
-                              
-                              <div className="grid gap-5">
+                             <div className="grid gap-5">
                                 {[...ticketHistoryDetails]
                                   .reverse()
                                   .map((obj, idx) => {
+                                   const user = usersData.find(u=>String(u.id) === String(obj.changed_by))
+                                   console.log("user",user)
                                     return (
                                       <div
-                                        className="flex justify-between  gap-2 w-full p-1"
+                                        className="flex justify-between  gap-2 w-full p-1 pb-3"
                                         key={idx}
                                       >
                                         <div className="flex  w-full gap-2 items-center a">
@@ -416,6 +467,10 @@ const OpenTicket = () => {
                                                 </AvatarFallback>
                                               </Avatar>
                                             </div>
+                                            {obj.old_value.trim() === "" ? (<div>
+                                                {/* {user?.first_name.trim()=== "" ? user.email : `${user?.first_name} ${user?.last_name}`} =====> uncomment this after getting login user  */}
+                                                <span> <strong>User</strong> Created the <strong>Card</strong></span>
+                                              </div>) :
                                             <div className="flex gap-3 flex-col items-center ">
                                               <div className=" w-full">
                                                 <strong className="capitalize">
@@ -426,6 +481,7 @@ const OpenTicket = () => {
                                                   {obj.field_name}
                                                 </strong>
                                               </div>
+                                              
                                               <div className="w-full flex gap-3 items-center">
                                                 <span className=" border border-green-200 px-2 py-1 text-gray-950 font-bold rounded">
                                                   {obj.old_value}
@@ -437,7 +493,7 @@ const OpenTicket = () => {
                                                   {obj.new_value}
                                                 </span>
                                               </div>
-                                            </div>
+                                            </div>}
                                           </div>
                                         </div>
 
@@ -450,16 +506,18 @@ const OpenTicket = () => {
                               </div>
                             </TabsContent>
                             <TabsContent value="comment">
-                              <TicketCommnets tktid = {ticketDetails.id} />
+                              <TicketCommnets tktid={ticketDetails.id} usersData={usersData} />
                             </TabsContent>
                             <TabsContent value="history">
                               <div className="grid gap-5">
                                 {[...ticketHistoryDetails]
                                   .reverse()
                                   .map((obj, idx) => {
+                                   const user = usersData.find(u=>String(u.id) === String(obj.changed_by))
+                                   console.log("user",user)
                                     return (
                                       <div
-                                        className="flex justify-between  gap-2 w-full p-1"
+                                        className="flex justify-between  gap-2 w-full p-1 pb-3"
                                         key={idx}
                                       >
                                         <div className="flex  w-full gap-2 items-center a">
@@ -472,6 +530,10 @@ const OpenTicket = () => {
                                                 </AvatarFallback>
                                               </Avatar>
                                             </div>
+                                            {obj.old_value.trim() === "" ? (<div>
+                                                {/* {user?.first_name.trim()=== "" ? user.email : `${user?.first_name} ${user?.last_name}`} =====> uncomment this after getting login user  */}
+                                                <span> <strong>User</strong> Created the <strong>Card</strong></span>
+                                              </div>) :
                                             <div className="flex gap-3 flex-col items-center ">
                                               <div className=" w-full">
                                                 <strong className="capitalize">
@@ -482,6 +544,7 @@ const OpenTicket = () => {
                                                   {obj.field_name}
                                                 </strong>
                                               </div>
+                                              
                                               <div className="w-full flex gap-3 items-center">
                                                 <span className=" border border-green-200 px-2 py-1 text-gray-950 font-bold rounded">
                                                   {obj.old_value}
@@ -493,7 +556,7 @@ const OpenTicket = () => {
                                                   {obj.new_value}
                                                 </span>
                                               </div>
-                                            </div>
+                                            </div>}
                                           </div>
                                         </div>
 
@@ -576,13 +639,21 @@ const OpenTicket = () => {
                       <Label>Collaborators</Label>
                       <div className="flex gap-0.5  items-center">
                         <div className="*:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:grayscale">
-                          {collaborators.slice(0, 2).map((item, idx) => (
-                            <Avatar key={idx} className="">
-                              <AvatarFallback className="uppercase font-bold bg-blue-950 text-white text-[10px]">
-                                {item[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
+                          {collaborators.slice(0, 2).map((item) => {
+                            const user = usersData.find(
+                              (u) => u.id === item.user_id
+                            );
+                            if (!user) return;
+                            return (
+                              <Avatar key={user.id} className="">
+                                <AvatarFallback className="uppercase font-bold bg-blue-950 text-white text-[10px]">
+                                  {user.first_name.trim() === ""
+                                    ? user.email[0]
+                                    : user.first_name[0] + user.last_name[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                            );
+                          })}
 
                           {collaborators.length > 2 && (
                             <Avatar className="">
@@ -608,16 +679,16 @@ const OpenTicket = () => {
                           </AvatarFallback>
                         </Avatar> */}
 
-                        {
+                        
                           <div>
                             <Popover
                               open={collabsOpen}
                               onOpenChange={setCollabsOpen}
                             >
                               <PopoverTrigger asChild>
-                                <Avatar className="cursor-pointer ">
+                                <Avatar className="cursor-pointer">
                                   <AvatarFallback
-                                    className="uppercase font-bold bg-blue-950 text-md text-white "
+                                    className="uppercase font-bold bg-blue-950 text-md text-white"
                                     onClick={() =>
                                       setShowSelectCollabs(!showSelectCollabs)
                                     }
@@ -626,47 +697,30 @@ const OpenTicket = () => {
                                   </AvatarFallback>
                                 </Avatar>
                               </PopoverTrigger>
+
                               <PopoverContent className={cn("p-0 w-fit")}>
                                 <Command className="text-xs">
                                   <CommandInput
                                     placeholder="Search Here..."
                                     className="h-9 text-xs"
                                   />
-
                                   <CommandList>
                                     <CommandEmpty>
                                       No results found.
                                     </CommandEmpty>
 
                                     <CommandGroup>
-                                      {usersData.map((item) => { //collaboaratorsData
-                                        const isSelected =
-                                          collaborators.includes(item.first_name+item.last_name); //
+                                      {usersData.map((item) => {
+                                        const isSelected = collaborators.some(
+                                          (c) => c.user_id === item.id
+                                        );
 
                                         return (
                                           <CommandItem
                                             key={item.id}
                                             className="text-xs capitalize flex items-center"
-                                            onSelect={() => {
-                                              let updated;
-
-                                              if (isSelected) {
-                                                // remove item
-                                                updated = collaborators.filter(
-                                                  (val) => val !== item.first_name+item.last_name
-                                                );
-                                              } else {
-                                                // add item
-                                                updated = [
-                                                  ...collaborators,
-                                                  item,
-                                                ];
-                                              }
-
-                                              setCollaborators(updated);
-                                            }}
+                                            onSelect={() => handleSelect(item)}
                                           >
-                                            {/* Checkbox */}
                                             <Check
                                               className={cn(
                                                 "mr-2",
@@ -676,7 +730,9 @@ const OpenTicket = () => {
                                               )}
                                             />
 
-                                            {item}
+                                            {item.first_name.trim() === ""
+                                              ? item.email
+                                              : `${item.first_name} ${item.last_name}`}
                                           </CommandItem>
                                         );
                                       })}
@@ -686,7 +742,7 @@ const OpenTicket = () => {
                               </PopoverContent>
                             </Popover>
                           </div>
-                        }
+                        
                       </div>
                     </div>
                     <div className="grid grid-cols-2">
