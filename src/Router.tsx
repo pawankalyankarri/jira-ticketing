@@ -15,6 +15,8 @@ import { SignupForm } from "./components/signup-form";
 import { LoginForm } from "./components/login-form";
 import Testing from "./tickets/Testing";
 import { CreateMilestone } from "./milestone/createMilestone/CreateMilestone";
+import GanttView from "./tickets/ticketsUiViews/GanttView";
+import Gantt2 from "./tickets/ticketsUiViews/Gantt2";
 export const AllRoutes = () => {
   const routes = [
     {
@@ -65,25 +67,34 @@ export const AllRoutes = () => {
           path: "deleteTicket/:id",
           element: <DeleteTicket />,
         },
+         {
+          path: "gantt",
+          element: <GanttView />,
+        },
+        {
+          path : "gantt2",
+          element : <Gantt2/>
+        }
+        
       ],
     },
     {
       path: "signup",
       element: <SignupForm />,
     },
+   
     {
-      path : "login",
-      element : <LoginForm/>
+      path: "login",
+      element: <LoginForm />,
     },
     {
-      path : "testing",
-      element : <Testing/>
+      path: "testing",
+      element: <Testing />,
     },
     {
-      path : "milestone",
-      element : <CreateMilestone/>
-    }
-    
+      path: "milestone",
+      element: <CreateMilestone />,
+    },
   ];
   return useRoutes(routes);
 };

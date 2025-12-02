@@ -98,15 +98,10 @@ interface ColumnTypeProp {
   column: string;
   tickets: TicketType[];
   activeId?: string | null;
-  gridCols: boolean;
+  gridCols?: boolean;
 }
 
-const DisplayTicket = ({
-  column,
-  tickets,
-  activeId,
-  gridCols,
-}: ColumnTypeProp) => {
+const DisplayTicket = ({ column, tickets, activeId }: ColumnTypeProp) => {
   const [activeColumn, setActiveColumn] = useState<string>("");
   const [newTodo, setNewTodo] = useState<string>("");
   const { setNodeRef, isOver } = useDroppable({
@@ -115,7 +110,7 @@ const DisplayTicket = ({
   const textareaRef = useRef<HTMLDivElement>(null);
 
   const { CreateTicket } = UseTickets();
-
+  //  console.log('grid cols',gridCols)
   async function handleKeydown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key !== "Enter") {
       return;
@@ -132,10 +127,11 @@ const DisplayTicket = ({
       description: "",
       file_attachment: [],
       comment: "",
-      start_date: null,
-      end_date: null,
+      start_date: new Date(),
+      end_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
       assignee_id: "",
       reporter_id: "",
+      parent_ticket_id : "26"
     };
     const res = await CreateTicket({ data: newTicket, files: [] });
     console.log("ticket created", res);
@@ -209,43 +205,45 @@ const DisplayTicket = ({
               icon={faPlus}
               className="font-bold text-gray-800 cursor-pointer"
               size="xl"
-              onClick={() => setActiveColumn(column)}
+              onClick={() =>
+                setActiveColumn((prev) => (prev === column ? "" : column))
+              }
             />
           </div>
         </div>
       </Card>
       <div className="flex flex-col h-[calc(100%-60px)] p-1 overflow-auto thin-scrollbar gap-1">
-        {gridCols && (
-          <div className="w-full px-2">
-            {activeColumn === column && (
-              <div
-                className="bg-white rounded-md border-2 border-blue-500 min-h-28 "
-                ref={textareaRef}
-              >
-                <Textarea
-                  className="resize-none border-0 outline-0 min-h-28 max-h-28 overflow-y-auto thin-scrollbar1 "
-                  value={newTodo}
-                  onChange={(e) => setNewTodo(e.target.value)}
-                  onKeyDown={handleKeydown}
-                />
+        {/* <div className="w-full px-2">
+          {activeColumn === column && (
+            <div
+              className="bg-white rounded-md border-2 border-blue-500 min-h-28 "
+              ref={textareaRef}
+            >
+              <Textarea
+                className="resize-none border-0 outline-0 min-h-28 max-h-28 overflow-y-auto thin-scrollbar1 "
+                value={newTodo}
+                onChange={(e) => setNewTodo(e.target.value)}
+                onKeyDown={handleKeydown}
+              />
 
-                {/* <div className="w-full flex justify-start gap-3 p-2">
-                <span></span>
-                <span>
-                  <FontAwesomeIcon
-                    icon={faCalendar}
-                    className="text-gray-500 cursor-pointer"
-                    size="xl"
-                  />
-                </span>
-                <span className=" ">
-                  <FontAwesomeIcon icon={faCircleUser} className="text-gray-500 cursor-pointer" size="xl" />
-                </span>
-              </div> */}
-              </div>
-            )}
-          </div>
-        )}
+              
+            </div>
+          )}
+        </div> */}
+
+        <div className="w-full px-2" ref={textareaRef}>
+          {activeColumn === column && (
+            <div className="bg-white rounded-md border-2 border-blue-500 min-h-28">
+              <Textarea
+                className="resize-none border-0 outline-0 min-h-28 max-h-28 overflow-y-auto thin-scrollbar1"
+                value={newTodo}
+                onChange={(e) => setNewTodo(e.target.value)}
+                onKeyDown={handleKeydown}
+              />
+            </div>
+          )}
+        </div>
+
         {tickets
           .filter((item) => String(item.id) !== String(activeId)) // hide the card being dragged
           .map((item: TicketType) => {

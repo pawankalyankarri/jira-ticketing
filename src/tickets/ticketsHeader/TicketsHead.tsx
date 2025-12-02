@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faChartBar,
   faCodeMerge,
   faFileLines,
   faGears,
@@ -149,6 +150,9 @@ const TicketsHead = ({
         </span>
         <span onClick={() => setGridCols(true)} className="p-1.5 outline-1 rounded cursor-pointer">
           <FontAwesomeIcon icon={faListUl} />
+        </span>
+        <span onClick={() => navigate("/gantt")} className="p-1.5 outline-1 rounded cursor-pointer">
+          <FontAwesomeIcon icon={faChartBar} />
         </span>
         <span className="p-1.5 outline-1 rounded shadow cursor-pointer text-gray-900">
           <FontAwesomeIcon icon={faFileLines} />

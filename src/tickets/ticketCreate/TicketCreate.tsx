@@ -53,6 +53,7 @@ export interface TicketFormDataType {
   end_date: string | null;
   assignee_id: string;
   reporter_id: string;
+  parent_ticket_id:string;
 }
 
 const TicketCreate = () => {
@@ -85,6 +86,7 @@ const TicketCreate = () => {
     end_date: null,
     assignee_id: "",
     reporter_id: "",
+    parent_ticket_id : ""
   });
   const { CreateTicket } = UseTickets();
   const navigate = useNavigate();

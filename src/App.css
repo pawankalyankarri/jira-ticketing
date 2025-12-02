@@ -40,3 +40,26 @@
 .read-the-docs {
   color: #888;
 }
+
+
+/* .svar-gantt .task-bar {
+  height: auto !important;
+}
+
+.svar-gantt-row {
+  height: auto !important;
+  min-height: 48px !important;
+} */
+
+
+/* override Willow container */
+.willow-root,
+.willow-container {
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  height: 100% !important;
+}
+
+

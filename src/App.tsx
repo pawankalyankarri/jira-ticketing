@@ -18,6 +18,7 @@ import UserProfilePage from "./UserProfile/UserProfilePage"
 import { useEffect, useState } from "react"
 import { BoardWorkflowAPI } from "./UserProfile/boardWorkflowAPI/BoardWorkflowAPI"
 import { Card } from "./components/ui/card"
+import "wx-react-gantt/dist/gantt.css";
 
 export default function Page() {
   
