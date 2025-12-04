@@ -238,7 +238,7 @@ export const UseTickets = () => {
       fileObject: File[],
       tktId: string
     ) => {
-      console.log("data", data);
+      console.log("data from usetickets", data);
       setLoading(true);
       try {
         data.file_attachment.length === 0 ? data.file_attachment.push("") : "";
@@ -246,7 +246,7 @@ export const UseTickets = () => {
         console.log("edittkt", response);
         // await fetchAllTickets()
 
-        console.log("data", data);
+        console.log("data from usetickets", data);
         console.log("tktid", tktId, fileObject);
         if (fileObject.length !== 0) {
           const res = await axios.post(

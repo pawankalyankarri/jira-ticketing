@@ -14,6 +14,9 @@ interface CalendarProps {
 
 export function Calendar22({ date, onChange }: CalendarProps) {
   const [open, setOpen] = React.useState(false);
+  const today = new Date();
+const nextTwoMonths = new Date();
+nextTwoMonths.setMonth(today.getMonth() + 12);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -32,10 +35,17 @@ export function Calendar22({ date, onChange }: CalendarProps) {
           mode="single"
           selected={date}
           captionLayout="dropdown"
+          endMonth={nextTwoMonths}
+          // disabled={[{ before: today.getMonth() }]} 
+          // disabled = {[
+          //   {before : today},
+          //   {after : nextTwoMonths}
+          // ]}
           onSelect={(selectedDate) => {
             if (selectedDate) onChange(selectedDate);
             setOpen(false);
           }}
+        
         />
       </PopoverContent>
     </Popover>

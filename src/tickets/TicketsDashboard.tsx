@@ -3,7 +3,6 @@ import TicketsHead from "./ticketsHeader/TicketsHead";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import DisplayTickets from "./DisplayTickets";
-import { motion } from "motion/react";
 import {
   DndContext,
   DragOverlay,
@@ -17,11 +16,12 @@ import { UseTickets, type TicketType } from "./hooks/UseTickets";
 import ShowSpecifiedTickets from "./ShowSpecifiedTickets";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
-import { Divide } from "lucide-react";
 import { Outlet, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import DisplayOrderedTickets from "./displayorderedtickets/DisplayOrderedTickets";
 import TicketsHeadTab from "./ticketsHeader/TicketHeadTab";
+import GanttView from "./ticketsUiViews/GanttView";
+import type { TicketDetails } from "./ticketInterfaces/TicketInterfaces";
 
 export interface ColumnsType {
   id: string;
@@ -29,15 +29,15 @@ export interface ColumnsType {
 }
 
 const TicketsDashboard = () => {
-  const [allTickets, setAllTickets] = useState<TicketType[]>([]);
-  const [refresh, setRefresh] = useState<boolean>(false);
+  const [allTickets, setAllTickets] = useState<TicketDetails[]>([]);
   const [noTkts, setNoTkts] = useState<boolean>(false);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [gridCols, setGridCols] = useState<boolean>(false);
-  const location = useLocation();
+  const [viewMode, setViewMode] = useState<"kanban" | "table" | "gantt">(
+    "kanban"
+  );
 
   const mountRef = useRef<boolean>(false);
-  const { UpdateTicketStatus, fetchAllTickets,UpdateTicketHistory,  } =
+  const { UpdateTicketStatus, fetchAllTickets, UpdateTicketHistory } =
     UseTickets();
 
   const Columns: string[] = [
@@ -75,6 +75,51 @@ const TicketsDashboard = () => {
     return () => window.removeEventListener("ticketsUpdated", handler);
   }, []);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // only start drag if mouse moves 5px
+      },
+    })
+  );
+
+  const views = {
+    table: <DisplayOrderedTickets allTickets={allTickets} />,
+    gantt: <GanttView allTickets={allTickets} setAllTickets={setAllTickets} />,
+    kanban: (
+      <DndContext
+        sensors={sensors}
+        onDragEnd={handleDragEnd}
+        onDragStart={(event) => setActiveId(String(event.active.id))}
+      >
+        {Columns.map((column, idx) => {
+          const columnTickets = allTickets.filter(
+            (ticket: TicketDetails) => ticket.ticket_state === column
+          );
+          return (
+            <DisplayTickets
+              key={idx}
+              column={column}
+              activeId={activeId}
+              tickets={columnTickets}
+            />
+          );
+        })}
+        <DragOverlay dropAnimation={null}>
+          {activeId
+            ? allTickets.find((t) => String(t.id) === String(activeId)) && (
+                <ShowSpecifiedTickets
+                  item={
+                    allTickets.find((t) => String(t.id) === String(activeId))!
+                  }
+                />
+              )
+            : null}
+        </DragOverlay>
+      </DndContext>
+    ),
+  };
+
   // useEffect(() => {
   //   setRefresh((prev) => !prev);
   // }, [location.pathname]);
@@ -94,16 +139,6 @@ const TicketsDashboard = () => {
   // const onHoldTickets = tickets.filter(
   //   (obj: any) => obj?.ticket_state === "OnHold"
   // );
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5, // only start drag if mouse moves 5px
-      },
-    })
-  );
-
-
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -131,7 +166,7 @@ const TicketsDashboard = () => {
     );
 
     // setTimeout(() => setActiveId(null), 0);
-    setActiveId(null)
+    setActiveId(null);
 
     // update object
     const updatedTicket = {
@@ -155,7 +190,7 @@ const TicketsDashboard = () => {
       field_name: "",
       old_value: oldTicket.ticket_state,
       new_value: newState,
-    }
+    };
 
     // console.log("sending:", updatedTicket);
 
@@ -164,8 +199,10 @@ const TicketsDashboard = () => {
     if (res?.status === 200) {
       toast.success(res.data.message);
 
-      const ticketHistoryResponse = await UpdateTicketHistory(updatedTicketHistoryData)
-      console.log('histroyresponse',ticketHistoryResponse)
+      const ticketHistoryResponse = await UpdateTicketHistory(
+        updatedTicketHistoryData
+      );
+      console.log("histroyresponse", ticketHistoryResponse);
       const response = await fetchAllTickets(); // re-fetch tickets
       setAllTickets(response);
     } else {
@@ -181,18 +218,13 @@ const TicketsDashboard = () => {
         <TicketsHead
           setTickets={setAllTickets}
           tickets={allTickets}
-          gridCols={gridCols}
-          setGridCols={setGridCols}
+          setViewMode = {setViewMode}
         />
-
       </div>
-          <div className="h-fit w-full"><TicketsHeadTab/></div>
+      <div className="h-fit w-full">
+        <TicketsHeadTab />
+      </div>
 
-      {/* <div className="grid auto-rows-min  gap-4 md:grid-cols-3">
-        <div className="bg-muted/50 aspect-video rounded-xl h-20 w-full" />
-        <div className="bg-muted/50 aspect-video rounded-xl  h-20 w-full" />
-        <div className="bg-muted/50 aspect-video rounded-xl h-20 w-full " />
-      </div> */}
       {allTickets.length === 0 ? (
         <div className="flex justify-center pt-20 h-screen">
           {noTkts ? (
@@ -207,8 +239,12 @@ const TicketsDashboard = () => {
             "flex-1 rounded-xl  w-full flex gap-4 text-xs overflow-x-auto"
           )}
         >
-          {gridCols ? (
-            <DisplayOrderedTickets allTickets={allTickets}  />
+          {views[viewMode]}
+
+          {/* {gridCols ? (
+            <DisplayOrderedTickets allTickets={allTickets} />
+          ) : ganttUi ? (
+            <GanttView allTickets={allTickets} setAllTickets={setAllTickets} />
           ) : (
             <DndContext
               sensors={sensors}
@@ -217,7 +253,7 @@ const TicketsDashboard = () => {
             >
               {Columns.map((column, idx) => {
                 const columnTickets = allTickets.filter(
-                  (ticket: TicketType) => ticket.ticket_state === column
+                  (ticket: TicketDetails) => ticket.ticket_state === column
                 );
                 return (
                   <DisplayTickets
@@ -245,82 +281,9 @@ const TicketsDashboard = () => {
                   : null}
               </DragOverlay>
             </DndContext>
-          )}
+          )} */}
         </div>
       )}
-      {/* <div className=" min-h-screen flex-1 rounded-xl md:min-h-min grid grid-cols-5 gap-4 text-xs">
-        <div className="bg-gray-50/20 aspect-video rounded-xl h-full w-full ">
-          <Card className="p-1.5 rounded-sm bg-gray-50">
-            <div className="w-full h-full flex justify-between">
-              <span className="uppercase font-bold text-gray-500">todo</span>
-              <span className="outline-1 px-1 bg-white font-bold rounded-full">
-                {todoTickets.length > 0 ? todoTickets.length : "0"}
-              </span>
-            </div>
-          </Card>
-          <div className="w-full h-full  hover:overflow-auto">
-            <DisplayTickets tickets={todoTickets} />
-          </div>
-        </div>
-        <div className="bg-blue-50/20 aspect-video rounded-xl h-full w-full">
-          <Card className="p-1.5 rounded-sm bg-blue-100">
-            <div className="w-full h-full flex justify-between">
-              <span className="uppercase font-bold text-blue-500">
-                inprocess
-              </span>
-              <span className="outline-1 px-1 bg-white font-bold rounded-full">
-                {inProgressTickets.length > 0 ? inProgressTickets.length : "0"}
-              </span>
-            </div>
-          </Card>
-          <div className="w-full h-full hover:overflow-auto">
-            <DisplayTickets tickets={inProgressTickets} />
-          </div>
-        </div>
-        <div className="bg-red-50/20 aspect-video rounded-xl h-full w-full ">
-          <Card className="p-1.5 rounded-sm bg-red-100">
-            <div className="w-full h-full flex justify-between">
-              <span className="uppercase font-bold text-red-500">canceled</span>
-              <span className="outline-1 px-1 bg-white font-bold rounded-full">
-                {canceledTickets.length > 0 ? canceledTickets.length : "0"}
-              </span>
-            </div>
-          </Card>
-          <div className="w-full h-full hover:overflow-auto">
-            <DisplayTickets tickets={canceledTickets} />
-          </div>
-        </div>
-        <div className="bg-green-50/20 aspect-video rounded-xl h-full w-full ">
-          <Card className="p-1.5 rounded-sm bg-green-100">
-            <div className="w-full h-full flex justify-between">
-              <span className="uppercase font-bold text-green-500">
-                resolved
-              </span>
-              <span className="outline-1 px-1 bg-white font-bold rounded-full">
-                {resolvedTickets.length > 0 ? resolvedTickets.length : "0"}
-              </span>
-            </div>
-          </Card>
-          <div className="w-full h-full hover:overflow-auto">
-            <DisplayTickets tickets={resolvedTickets} />
-          </div>
-        </div>
-        <div className=" bg-orange-50/20 aspect-video rounded-xl h-full w-full ">
-          <Card className="p-1.5 rounded-sm bg-orange-100">
-            <div className="w-full h-full flex justify-between">
-              <span className="uppercase font-bold text-orange-500">
-                onhold
-              </span>
-              <span className="outline-1 px-1 bg-white font-bold rounded-full">
-                {onHoldTickets.length > 0 ? onHoldTickets.length : "0"}
-              </span>
-            </div>
-          </Card>
-          <div className="w-full h-full hover:overflow-auto">
-            <DisplayTickets tickets={onHoldTickets} />
-          </div>
-        </div>
-      </div> */}
     </div>
   );
 };

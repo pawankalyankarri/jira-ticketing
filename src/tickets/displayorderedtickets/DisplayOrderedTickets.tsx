@@ -12,14 +12,15 @@ import {
 } from "@/components/ui/table";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useNavigate } from "react-router-dom";
+import type { TicketDetails } from "../ticketInterfaces/TicketInterfaces";
 interface DisplayOrderedTicketsProps {
-  allTickets: TicketType[];
+  allTickets: TicketDetails[];
 }
 const DisplayOrderedTickets = ({ allTickets }: DisplayOrderedTicketsProps) => {
   const navigate = useNavigate()
   return (
-    <div>
-      <Table className="w-full table-fixed text-gray-600">
+    <div className="h-full ">
+      <Table className="w-full table-fixed text-gray-600 overflow-y-auto">
         <TableHeader>
           <TableRow >
             <TableHead className="">TicketId</TableHead>
@@ -50,7 +51,7 @@ const DisplayOrderedTickets = ({ allTickets }: DisplayOrderedTicketsProps) => {
                 <TableCell className=" text-right flex gap-2 items-center">
                   <Avatar>
                     <AvatarFallback className="uppercase font-bold bg-blue-950 text-md text-white ">
-                      {tkt.assignee_id[0]}
+                      {tkt.assignee_id ? tkt.assignee_id[0]:""}
                     </AvatarFallback>
                   </Avatar>
                   {tkt.assignee_id}

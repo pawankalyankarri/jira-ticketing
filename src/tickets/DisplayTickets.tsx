@@ -93,12 +93,12 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import type { TicketDetails } from "./ticketInterfaces/TicketInterfaces";
 
 interface ColumnTypeProp {
   column: string;
-  tickets: TicketType[];
+  tickets: TicketDetails[];
   activeId?: string | null;
-  gridCols?: boolean;
 }
 
 const DisplayTicket = ({ column, tickets, activeId }: ColumnTypeProp) => {
@@ -131,7 +131,7 @@ const DisplayTicket = ({ column, tickets, activeId }: ColumnTypeProp) => {
       end_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
       assignee_id: "",
       reporter_id: "",
-      parent_ticket_id : "26"
+      parent_ticket_id : ""
     };
     const res = await CreateTicket({ data: newTicket, files: [] });
     console.log("ticket created", res);
@@ -246,7 +246,7 @@ const DisplayTicket = ({ column, tickets, activeId }: ColumnTypeProp) => {
 
         {tickets
           .filter((item) => String(item.id) !== String(activeId)) // hide the card being dragged
-          .map((item: TicketType) => {
+          .map((item: TicketDetails) => {
             return (
               <motion.div
                 key={item.id}

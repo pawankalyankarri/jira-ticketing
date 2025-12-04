@@ -27,20 +27,21 @@ import {  type TicketType } from "./hooks/UseTickets";
 //   MenubarTrigger,
 // } from "@/components/ui/menubar";
 import { motion } from "motion/react";
+import type { TicketDetails } from "./ticketInterfaces/TicketInterfaces";
 
 interface SpecifiedTicketsProps {
-  item: TicketType;
+  item: TicketDetails;
   isDragging?: boolean;
 }
 const ShowSpecifiedTickets = ({ item, isDragging }: SpecifiedTicketsProps) => {
   const navigate = useNavigate();
 
-  const date = new Date(item.start_date);
+  const date = item.start_date ? new Date(item.start_date):null;
   const options: Intl.DateTimeFormatOptions = {
     month: "short",
     day: "2-digit",
   };
-  const formatted = date.toLocaleDateString("en-US", options);
+  const formatted = date ? date.toLocaleDateString("en-US", options):null;
   // draggable
   const { attributes, setNodeRef, listeners, transform } = useDraggable({
     id: item.id,

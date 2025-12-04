@@ -46,10 +46,11 @@ export interface TicketUpdateFormDataType {
   comment: string;
   start_date: string | null;
   end_date: string | null;
-  assignee_id: string;
-  reporter_id: string;
+  assignee_id: string|null;
+  reporter_id: string|null;
   update_id?: string;
   merge_status?: boolean;
+  parent_ticket_id? : string|number
 }
 
 const UpdateTicket = () => {
@@ -582,7 +583,7 @@ const UpdateTicket = () => {
                             SelectSearchData={assigneeData}
                             title={"Select Assignee"}
                             size={"md"}
-                            value={formData.assignee_id}
+                            value={formData.assignee_id ?? ""}
                             onChange={handleSelectChange("assignee_id")}
                           />
                         </div>
@@ -593,7 +594,7 @@ const UpdateTicket = () => {
                             className="text-sm w-[90%]"
                             id="reporter_id"
                             name="reporter_id"
-                            value={formData.reporter_id}
+                            value={formData.reporter_id?? ""}
                             onChange={handleInputChange}
                           />
                         </div>

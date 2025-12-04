@@ -28,18 +28,20 @@ export interface FormEvent {
 export interface FormProps {
   task: ITask;
   taskTypes: TaskTypeOption[];
+  taskState : string[]
   onAction: (event: FormEvent) => void;
 }
 
-export function Form({ task, taskTypes, onAction }: FormProps) {
+export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
   const [localTask, setLocalTask] = useState<ITask>(task);
 
   useEffect(() => {
     setLocalTask(task);
+    console.log("localtask", task);
   }, [task]);
+  console.log('local',localTask)
 
   if (!localTask) return null;
-  // console.log('localtask',localTask.progress)
 
   return (
     <div className="fixed top-0 right-0 h-full w-105 bg-gray-50 p-5 border-l border-gray-200 shadow-lg overflow-y-auto z-50 box-border">
@@ -48,7 +50,7 @@ export function Form({ task, taskTypes, onAction }: FormProps) {
           onClick={() => onAction({ action: "close-form", data: null })}
           className="px-2 py-0.5  text-white rounded-md bg-gray-400 cursor-pointer font-bold"
         >
-          <XIcon size={"18"}  />
+          <XIcon size={"18"} />
         </button>
 
         <button
@@ -115,29 +117,53 @@ export function Form({ task, taskTypes, onAction }: FormProps) {
         </Select>
       </div>
 
+
+      <div className="mb-4">
+        <Label className="block mb-1 font-medium">Task State</Label>
+        <Select
+          value={localTask.state}
+          onValueChange={(value: string) =>
+            setLocalTask({ ...localTask, state: value })
+          }
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select task State" />
+          </SelectTrigger>
+          <SelectContent>
+            {taskState.map((t,idx) => (
+              <SelectItem key={idx} value={t}>
+                {t}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Progress */}
 
       <div className="mb-4">
-        <label className="block mb-1 font-medium">Progress ({localTask.progress || 0}%)</label>
+        <label className="block mb-1 font-medium">
+          Progress ({localTask.progress || 0}%)
+        </label>
         <Slider
-          value={[localTask.progress || 0]} 
-          onValueChange={
-            (val: number[]) => setLocalTask({ ...localTask, progress: val[0] }) 
+          value={[localTask.progress || 0]}
+          onValueChange={(val: number[]) =>
+            setLocalTask({ ...localTask, progress: val[0] })
           }
           min={0}
           max={100}
           className="cursor-pointer"
         />
-        
       </div>
 
       {/* Details */}
       <div className="mb-6">
         <label className="block mb-1 font-medium">Details</label>
         <Textarea
-          value={localTask.details || ""}
-          onChange={(e) =>
+          value={localTask.details}
+          onChange={(e) =>{
             setLocalTask({ ...localTask, details: e.target.value })
+            console.log(e.target.value)}
           }
           rows={6}
           cols={6}
@@ -148,14 +174,17 @@ export function Form({ task, taskTypes, onAction }: FormProps) {
       {/* Buttons */}
       <div className="flex justify-end">
         <button
-          onClick={() => onAction({ action: "update-task", data: localTask })}
-  //         onClick={() =>
-  //   onAction({
-  //     action: localTask.isNew ? "add-task" : "update-task",
-  //     data: localTask,
-  //   })
-  // }
-        className="px-4 py-2 bg-green-400 text-white font-bold rounded-md cursor-pointer hover:bg-green-400"
+          // onClick={() => onAction({ action: "update-task", data: localTask })}
+          onClick={() =>
+            onAction({
+              action:
+      typeof localTask.id === "string" && localTask.id.startsWith("temp://")
+        ? "add-task"
+        : "update-task",
+              data: localTask,
+            })
+          }
+          className="px-4 py-2 bg-green-400 text-white font-bold rounded-md cursor-pointer hover:bg-green-400"
         >
           Save
         </button>

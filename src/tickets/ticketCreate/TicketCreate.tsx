@@ -86,7 +86,7 @@ const TicketCreate = () => {
     end_date: null,
     assignee_id: "",
     reporter_id: "",
-    parent_ticket_id : ""
+    parent_ticket_id : "0"
   });
   const { CreateTicket } = UseTickets();
   const navigate = useNavigate();

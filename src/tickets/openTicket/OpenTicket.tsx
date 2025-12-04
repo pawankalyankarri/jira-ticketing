@@ -813,6 +813,9 @@ const OpenTicket = () => {
                         </div>
                       </motion.div>
                     )}
+                    <Card>
+                      subtidkes
+                    </Card>
                   </CardContent>
                 </Card>
                 <div className="flex flex-col items-end">

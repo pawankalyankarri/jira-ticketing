@@ -52,6 +52,7 @@ export const AllRoutes = () => {
               path: "statusSelect/:wfId",
               element: <WorkflowStatusSelect />,
             },
+           
           ],
         },
         {
@@ -67,22 +68,18 @@ export const AllRoutes = () => {
           path: "deleteTicket/:id",
           element: <DeleteTicket />,
         },
-         {
-          path: "gantt",
-          element: <GanttView />,
-        },
+
         {
-          path : "gantt2",
-          element : <Gantt2/>
-        }
-        
+          path: "gantt2",
+          element: <Gantt2 />,
+        },
       ],
     },
     {
       path: "signup",
       element: <SignupForm />,
     },
-   
+
     {
       path: "login",
       element: <LoginForm />,
