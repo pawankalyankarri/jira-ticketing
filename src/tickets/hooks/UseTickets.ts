@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import type { TicketFormDataType } from "../ticketCreate/TicketCreate";
 import type { TicketUpdateFormDataType } from "../updateTicket/UpdateTicket";
 import type { TicketHistoryUpdateType } from "../ticketInterfaces/TicketInterfaces";
-
 interface UpdateTicketStatusProps {
   ticket_id: string;
   ticket_state: string;
@@ -83,10 +82,12 @@ export const UseTickets = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
   // const { setTickets, setLoading, setError } = TicketsStore();
-  const mountRef = useRef<boolean>(false);
+  // const mounttktRef = useRef<boolean>(false);
+  // const mountcommentRef = useRef<boolean>(false)
 
   const fetchAllTickets = useCallback(async () => {
-    // if(mountRef.current)return
+    // if(mounttktRef.current)return
+    // mounttktRef.current = true
     setLoading(true);
     try {
       const res = await axios.get("/api/ticketing");
@@ -176,7 +177,7 @@ export const UseTickets = () => {
   // );
 
   const CreateTicket = useCallback(
-    async ({ data, files }: { data: any; files: File[] }) => {
+    async ({ data, files }: { data: any; files: File[]|null }) => {
       setLoading(true);
       console.log("data,files", data, files);
       // console.log(files[0]);
@@ -197,13 +198,15 @@ export const UseTickets = () => {
         // console.log("filefiled", files);
 
         //attach file calling
+        if(files){
         const res = await axios.post(
           "/api/ticketing/attach-file",
           { ticket_id: tktId, uploadfile: files[0] },
           {
             headers: { "Content-Type": "multipart/form-data" },
           }
-        );
+        )
+      console.log("fileres", res);}
         // ticket histroy is calling
 
         const ticket_history_res = await axios.post(
@@ -218,7 +221,7 @@ export const UseTickets = () => {
         );
         console.log("tkthistoryres", ticket_history_res);
 
-        console.log("fileres", res);
+        
         toast.success("Ticket created successfully");
         await fetchAllTickets();
 
@@ -238,7 +241,7 @@ export const UseTickets = () => {
       fileObject: File[],
       tktId: string
     ) => {
-      console.log("data from usetickets", data);
+      console.log("data from usetickets before calling api", data);
       setLoading(true);
       try {
         data.file_attachment.length === 0 ? data.file_attachment.push("") : "";
@@ -246,7 +249,7 @@ export const UseTickets = () => {
         console.log("edittkt", response);
         // await fetchAllTickets()
 
-        console.log("data from usetickets", data);
+        
         console.log("tktid", tktId, fileObject);
         if (fileObject.length !== 0) {
           const res = await axios.post(
@@ -271,8 +274,8 @@ export const UseTickets = () => {
 
   const GetTicket = useCallback(
     async (tktId: string) => {
-      if (mountRef.current) return;
-      mountRef.current = true;
+      // if (mountRef.current) return;
+      // mountRef.current = true;
       setLoading(true);
       try {
         const response = await axios.get(`/api/ticketing/${tktId}`);
@@ -317,6 +320,7 @@ export const UseTickets = () => {
   }, []);
 
   const GetTicketComments = useCallback(async (data: { ticket_id: string }) => {
+    
     try {
       const res = await axios.post("/api/ticket-comment/get-comments", data);
       console.log(res);

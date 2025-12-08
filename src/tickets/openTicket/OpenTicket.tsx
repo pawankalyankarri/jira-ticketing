@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type WheelEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { UseTickets, type TicketType } from "../hooks/UseTickets";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,21 +14,30 @@ import TextareaAutosize from "react-textarea-autosize";
 import { motion } from "motion/react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
+  ArrowDown,
+  AtSign,
   Bold,
   Check,
+  ChevronDown,
+  CornerDownLeft,
+  CornerDownRight,
+  CornerRightDown,
+  Image,
   Italic,
   List,
   ListOrdered,
+  Smile,
   Strikethrough,
-  Underline,
+  Underline as ULine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { SelectSearch } from "@/components/ui/SelectSearch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faArrowTurnDown,
   faClockRotateLeft,
   faComment,
   faGears,
@@ -59,18 +68,25 @@ import {
 import { Progress } from "@/components/ui/progress";
 import type {
   TicketCollaboratorsDataType,
+  TicketDetails,
   TicketHistoryDetailsType,
   UsersDataType,
 } from "../ticketInterfaces/TicketInterfaces";
 import { BoardWorkflowAPI } from "@/UserProfile/boardWorkflowAPI/BoardWorkflowAPI";
+import { EditorContent, Extension, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+import Underline from "@tiptap/extension-underline";
+import { keymap } from "@tiptap/pm/keymap";
+import { Button } from "@/components/ui/button";
 
 const OpenTicket = () => {
-  const [ticketDetails, setTicketDetails] = useState<TicketType | null>(null);
+  const [ticketDetails, setTicketDetails] = useState<TicketDetails>();
   const [ticketHistoryDetails, setTicketHistoryDetails] = useState<
     TicketHistoryDetailsType[]
   >([]);
-  const [createdDateStr, setCreatedDateStr] = useState<String>("");
-  const [createdTimeStr, setCreatedTimeStr] = useState<String>("");
+  const [createdDateStr, setCreatedDateStr] = useState<string>("");
+  const [createdTimeStr, setCreatedTimeStr] = useState<string>("");
   const [open, setOpen] = useState<boolean>(true);
   const [collabsOpen, setCollabsOpen] = useState<boolean>(true);
   const [collaborators, setCollaborators] = useState<
@@ -80,6 +96,10 @@ const OpenTicket = () => {
   const [showSubTaskInput, setShowSubTaskInput] = useState<boolean>(false);
   const [assigneedetails, setAssigneeDetails] = useState<string>("");
   const [usersData, setUsersData] = useState<UsersDataType[]>([]);
+  const [allTickets, setAllTickets] = useState<TicketDetails[]>([]);
+  const [subtickets, setSubTickets] = useState<TicketDetails[]>([]);
+  const [parentTicket, setParentTicket] = useState<TicketDetails>();
+  const [newTodo, setNewTodo] = useState<string>("");
 
   const navigate = useNavigate();
   const {
@@ -87,7 +107,10 @@ const OpenTicket = () => {
     GetTicketHistory,
     CreateTicketCollaborators,
     GetTicketAllCollaborators,
-    RemoveTicketCollaborator
+    EditTicket,
+    RemoveTicketCollaborator,
+    fetchAllTickets,
+    CreateTicket,
   } = UseTickets();
   const { GetUsers } = BoardWorkflowAPI();
   const params = useParams();
@@ -102,11 +125,34 @@ const OpenTicket = () => {
 
   const ticketSeverityData = ["Low", "Medium", "High", "Critical"];
 
+  console.log("ticket History===>", ticketHistoryDetails);
+
   useEffect(() => {
     if (params.id) {
       const fetch = async () => {
-        const response = await GetTicket(String(params.id));
+        // const response = await GetTicket(String(params.id));
+        const res = await fetchAllTickets();
+        setAllTickets(res);
+        const response = res.find(
+          (tkt: TicketDetails) => String(tkt.id) === params.id
+        );
+        if (!response) return;
+
         if (response) {
+          const subtkts = res.filter(
+            (t: TicketDetails) =>
+              String(t.parent_ticket_id) === String(params.id)
+          );
+
+          const parent_tkt = res.find(
+            (tkt: TicketDetails) =>
+              String(tkt.id) === String(response.parent_ticket_id)
+          );
+          // console.log("res",res)
+          // console.log('respones',response)
+          console.log("parent tkt ====>", parent_tkt);
+          setParentTicket(parent_tkt);
+          setSubTickets(subtkts);
           setTicketDetails(response);
           const tktHistory = await GetTicketHistory({
             ticket_id: String(response.id),
@@ -125,8 +171,10 @@ const OpenTicket = () => {
       };
       fetch();
     }
-  }, []);
+  }, [params.id]);
   console.log("ticketdetails", ticketDetails);
+  // console.log(allTickets)
+  console.log("subtickets", subtickets);
   // console.log("tkthistorydetails", ticketHistoryDetails.reverse());
 
   useEffect(() => {
@@ -150,6 +198,48 @@ const OpenTicket = () => {
     }
   }, [ticketDetails]);
 
+  async function handleKeydown(
+    e: React.KeyboardEvent<HTMLTextAreaElement>,
+    tkt: TicketDetails
+  ) {
+    if (e.key !== "Enter") {
+      return;
+    }
+    const newTicket = {
+      project_id: "",
+      board_id: "",
+      workflow_id: "",
+      status_id: "",
+      ticket_status: tkt.ticket_status,
+      ticket_state: tkt.ticket_state,
+      ticket_severity: tkt.ticket_severity,
+      summary: newTodo,
+      description: "",
+      file_attachment: [],
+      comment: "",
+      start_date: new Date(),
+      end_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      assignee_id: "",
+      reporter_id: "",
+      parent_ticket_id: String(tkt.id),
+    };
+    const res = await CreateTicket({ data: newTicket, files: [] });
+    console.log("ticket created", res);
+    if (res?.status === 200) {
+      window.dispatchEvent(new Event("ticketsUpdated"));
+    }
+
+    console.log(newTodo, tkt.ticket_state);
+    const tkts = await fetchAllTickets();
+    const subtkts = tkts.filter(
+      (t: TicketDetails) => String(t.parent_ticket_id) === String(params.id)
+    );
+    setSubTickets(subtkts);
+
+    setNewTodo("");
+    setShowSubTaskInput(false);
+  }
+
   async function GetAllCollaborators() {
     const collabsres = await GetTicketAllCollaborators({
       ticket_id: String(params.id),
@@ -158,7 +248,7 @@ const OpenTicket = () => {
     setCollaborators(collabsres.data);
   }
 
-  const handleSelect = async (item:UsersDataType) => {
+  const handleSelect = async (item: UsersDataType) => {
     const isSelected = collaborators.some((c) => c.user_id === item.id);
 
     if (isSelected) {
@@ -180,7 +270,7 @@ const OpenTicket = () => {
         });
       }
     } catch (err) {
-      console.error('selecting adding or deleting collaborators',err);
+      console.error("selecting adding or deleting collaborators", err);
 
       setCollaborators((prev: any) => {
         if (isSelected) {
@@ -190,7 +280,61 @@ const OpenTicket = () => {
         }
       });
     }
-    console.log("collabs after select",collaborators)
+    console.log("collabs after select", collaborators);
+  };
+
+  const handleDescriptionUpdate = async () => {
+    console.log(ticketDetails);
+    if (!editor) return;
+    const html = editor.getHTML(); // get formatted content as HTML
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = editor.getHTML();
+    const textContent = tempDiv.textContent || "";
+    if (!textContent) {
+      return;
+    }
+    if (!ticketDetails) return;
+    await handleEnter("description", html);
+    // const updatedData = {
+    //   ticket_status: ticketDetails?.ticket_status,
+    //   ticket_state: ticketDetails?.ticket_state,
+    //   ticket_severity: ticketDetails?.ticket_severity,
+    //   summary: ticketDetails?.summary,
+    //   description: html,
+    //   file_attachment: ticketDetails?.file_attachment,
+    //   comment: ticketDetails?.comment,
+    //   start_date: ticketDetails?.start_date,
+    //   end_date: ticketDetails?.end_date,
+    //   assignee_id: ticketDetails?.assignee_id,
+    //   reporter_id: ticketDetails?.reporter_id,
+    //   update_id: String(ticketDetails.id),
+    // };
+
+    // console.log(updatedData);
+    // const res = await EditTicket(updatedData, [], String(ticketDetails?.id));
+    // console.log("res", res);
+  };
+
+  const handleEnter = async (name: string, value: string) => {
+    if (!ticketDetails) return;
+    const updatedData = {
+      ticket_status: ticketDetails?.ticket_status,
+      ticket_state: ticketDetails?.ticket_state,
+      ticket_severity: ticketDetails?.ticket_severity,
+      summary: ticketDetails?.summary,
+      description: ticketDetails.description,
+      file_attachment: ticketDetails?.file_attachment,
+      comment: ticketDetails?.comment,
+      start_date: ticketDetails?.start_date,
+      end_date: ticketDetails?.end_date,
+      assignee_id: ticketDetails?.assignee_id,
+      reporter_id: ticketDetails?.reporter_id,
+      update_id: String(ticketDetails.id),
+      [name]: value,
+    };
+    console.log(updatedData);
+    const res = await EditTicket(updatedData, [], String(ticketDetails?.id));
+    console.log("res", res);
   };
 
   const formatTimeAgo = (dateStr: string) => {
@@ -226,82 +370,133 @@ const OpenTicket = () => {
     });
   }
 
+  const BrowserShortcuts = Extension.create({
+    name: "browserShortcuts",
+
+    addProseMirrorPlugins() {
+      return [
+        keymap({
+          "Shift-Alt-i": () => false,
+          "Shift-Alt-I": () => false,
+        }),
+      ];
+    },
+  });
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      Placeholder.configure({ placeholder: "Add comments" }),
+      BrowserShortcuts,
+    ],
+    content: ticketDetails?.description || "",
+  });
+
+  useEffect(() => {
+    if (editor && ticketDetails?.description) {
+      editor.commands.setContent(ticketDetails.description);
+    }
+  }, [editor, ticketDetails]);
+
   return (
     <Dialog
-      open={open}
+      open
+      defaultOpen={true}
       onOpenChange={(val) => {
         setOpen(val);
-        val ? "" : navigate("/tickets");
+        console.log("value", val);
+        if (!val) navigate("/tickets");
       }}
     >
       {ticketDetails && (
         <DialogContent className="w-full! sm:w-[90%]! max-w-none! h-[90%]! border-0! shadow-none! focus-visible:outline-none! focus-visible:ring-0 gap-2 p-0 ">
           <DialogHeader className=" gap-0 sticky bg-gray-200 max-w-full py-3 h-fit rounded-md">
             <DialogTitle className="w-full px-2 flex justify-between items-center  ">
-              <span className="border-2 border-orange-400 text-orange-400 p-1 text-sm px-2 rounded ">
-                {ticketDetails.ticket_status}
-              </span>
+              <div className="flex gap-4 items-center">
+                <div>
+                  {parentTicket && (
+                    <div className="flex gap-1">
+                      <span className="text-gray-500 text-[10px]">
+                        {parentTicket?.ticket_id}
+                      </span>
+                      <CornerRightDown size={"14px"} />
+                    </div>
+                  )}
+                  <span className="text-md font-bold text-blue-950">
+                    {ticketDetails.ticket_id}
+                  </span>
+                </div>
+                <span className="border-2 border-orange-400 text-orange-400 p-1 text-sm px-2 rounded ">
+                  {ticketDetails.ticket_status}
+                </span>
+              </div>
 
               <div className="flex gap-2 items-center">
-                {/* <div className="">
+                <div className="">
                   <Popover
                   // open={collabsOpen}
                   // onOpenChange={setCollabsOpen}
                   >
                     <PopoverTrigger asChild>
-                      <span className="text-sm border border-black p-1.5 cursor-pointer rounded">
-                        Assign Parent
-                      </span>
+                      <div className="border border-black p-1.5 px-2 cursor-pointer rounded flex items-center">
+                        <span className="text-sm ">Change Parent</span>
+                        <ChevronDown size={"18px"} />
+                      </div>
                     </PopoverTrigger>
                     <PopoverContent className={cn("p-0")}>
                       <Command className="text-xs">
                         <CommandInput
                           placeholder="Search Here..."
-                          className="h-9 text-xs"
+                          className="h-9 text-xs "
                         />
 
-                        <CommandList>
+                        <CommandList
+                          className=" p-0 max-h-40 overflow-y-auto"
+                          onWheel={(e) => {
+                            const el = e.currentTarget as HTMLElement;
+                            if (el.scrollHeight > el.clientHeight) {
+                              el.scrollTop += (e as WheelEvent).deltaY;
+                              e.preventDefault();
+                            }
+                          }}
+                        >
                           <CommandEmpty>No results found.</CommandEmpty>
 
                           <CommandGroup>
-                            {collaboratorsData.map((item) => {
-                              // const isSelected =
-                              //   collaborators.includes(item); // <-- MULTI-SELECT LOGIC
+                            {allTickets.map((tkt: TicketDetails) => {
+                              const isSelected =
+                                ticketDetails.parent_ticket_id !== "0" &&
+                                ticketDetails.parent_ticket_id ===
+                                  String(tkt.id);
 
                               return (
                                 <CommandItem
-                                  key={item}
+                                  key={tkt.id}
                                   className="text-xs capitalize flex items-center"
                                   onSelect={() => {
-                                    let updated;
+                                    const updated = isSelected
+                                      ? {
+                                          ...ticketDetails,
+                                          parent_ticket_id: "0",
+                                        }
+                                      : {
+                                          ...ticketDetails,
+                                          parent_ticket_id: String(tkt.id),
+                                        };
 
-                                    // if (isSelected) {
-                                    //   // remove item
-                                    //   updated = collaborators.filter(
-                                    //     (val) => val !== item
-                                    //   );
-                                    // } else {
-                                    //   // add item
-                                    //   updated = [
-                                    //     ...collaborators,
-                                    //     item,
-                                    //   ];
-                                    // }
-
-                                    // setCollaborators(updated); // send updated list
+                                    console.log("update", updated);
+                                    setTicketDetails(updated);
                                   }}
                                 >
-                                  
                                   <Check
                                     className={cn(
-                                      "mr-2"
-                                      // isSelected
-                                      //   ? "opacity-100"
-                                      //   : "opacity-0"
+                                      "mr-2",
+                                      isSelected ? "opacity-100" : "opacity-0"
                                     )}
                                   />
 
-                                  {item}
+                                  {tkt.ticket_id}
                                 </CommandItem>
                               );
                             })}
@@ -310,7 +505,7 @@ const OpenTicket = () => {
                       </Command>
                     </PopoverContent>
                   </Popover>
-                </div> */}
+                </div>
 
                 <div className="border border-black rounded p-1 cursor-pointer">
                   <span>
@@ -321,7 +516,10 @@ const OpenTicket = () => {
 
                 <div
                   className="float-right p-1.5 bg-gray-300 rounded"
-                  onClick={() => navigate("/tickets")}
+                  onClick={() => {
+                    setOpen(false);
+                    navigate("/tickets");
+                  }}
                 >
                   <FontAwesomeIcon
                     icon={faX}
@@ -410,13 +608,170 @@ const OpenTicket = () => {
                       </div>
                     </div> */}
                     </>
-                    <div>
-                      <span className="text-lg font-bold">Description</span>
-                      <p>{ticketDetails.description}</p>
+                    <div className="font-bold text-blue-950 text-lg">
+                      {/* <span className="text-lg font-bold">Summary</span> */}
+                      <Textarea
+                        value={ticketDetails.summary}
+                        onChange={(e) =>
+                          setTicketDetails((prev) => ({
+                            ...prev!,
+                            summary: e.target.value,
+                          }))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleEnter("summary", ticketDetails.summary);
+                          }
+                        }}
+                        className=" resize-none min-h-10 border-0 outline-0 focus:outline-0 focus:border-0 font-bold text-blue-950 text-lg! px-0  focus:ring-0 shadow-none"
+                      />
+                      {/* <p className="font-bold text-blue-950 text-lg">
+                        {ticketDetails.summary}
+                      </p> */}
                     </div>
                     <div>
-                      <span className="text-lg font-bold">Summary</span>
-                      <p>{ticketDetails.summary}</p>
+                      <span className="text-lg font-bold"> Description</span>
+
+                      <div className="border-2 rounded">
+                        <div className="flex border-b-2 bg-gray-200 ">
+                          <ToggleGroup type="single" className="flex gap-2">
+                            {/* Bold */}
+                            <ToggleGroupItem
+                              value="bold"
+                              className={`p-2 rounded cursor-pointer ${
+                                editor?.isActive("bold")
+                                  ? "bg-gray-700 text-white"
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                editor?.chain().focus().toggleBold().run()
+                              }
+                            >
+                              <Bold className="h-4 w-4" />
+                            </ToggleGroupItem>
+
+                            {/* Italic */}
+                            <ToggleGroupItem
+                              value="italic"
+                              className={`p-2 rounded cursor-pointer ${
+                                editor?.isActive("italic")
+                                  ? "bg-gray-700 text-white"
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                editor?.chain().focus().toggleItalic().run()
+                              }
+                            >
+                              <Italic className="h-4 w-4" />
+                            </ToggleGroupItem>
+
+                            {/* Underline */}
+                            <ToggleGroupItem
+                              value="underline"
+                              className={`p-2 rounded cursor-pointer ${
+                                editor?.isActive("underline")
+                                  ? "bg-gray-700 text-white"
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                editor?.chain().focus().toggleUnderline().run()
+                              }
+                            >
+                              <ULine className="h-4 w-4" />
+                            </ToggleGroupItem>
+
+                            {/* Ordered List */}
+                            {/* <ToggleGroupItem
+                              value="listOrdered"
+                              className={`p-2 rounded cursor-pointer ${
+                                editor?.isActive("orderedList")
+                                  ? "bg-gray-700 text-white"
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                editor
+                                  ?.chain()
+                                  .focus()
+                                  .toggleOrderedList()
+                                  .run()
+                              }
+                            >
+                              <ListOrdered className="h-4 w-4" />
+                            </ToggleGroupItem>
+
+                            <ToggleGroupItem
+                              value="list"
+                              className={`p-2 rounded cursor-pointer ${
+                                editor?.isActive("bulletList")
+                                  ? "bg-gray-700 text-white"
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                editor?.chain().focus().toggleBulletList().run()
+                              }
+                            >
+                              <List className="h-4 w-4" />
+                            </ToggleGroupItem> */}
+
+                            {/* <ToggleGroupItem
+                              value="strikeThrough"
+                              className="cursor-pointer"
+                            >
+                              <Strikethrough className="h-4 w-4" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem
+                              value="image"
+                              className="cursor-pointer"
+                            >
+                              <Image className="h-4 w-4" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem
+                              value="atSign"
+                              className="cursor-pointer"
+                            >
+                              <AtSign className="h-4 w-4" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem
+                              value="smile"
+                              className="cursor-pointer"
+                            >
+                              <Smile className="h-4 w-4" />
+                            </ToggleGroupItem> */}
+                          </ToggleGroup>
+                        </div>
+                        <div className="">
+                          <EditorContent
+                            editor={editor}
+                            // onFocus={() => setIsFocused(true)}
+                            // ref={textareaRef}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter")
+                                console.log("enter", editor.getHTML());
+                            }}
+                            className={cn(`tiptap-editor
+                                          border-0 rounded-md cursor-pointer outline-none focus:outline-none focus:ring-0
+                                          [&_p]:min-h-30 [&_p]:rounded-md [&_p]:p-2`)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        className="bg-blue-950 hover:bg-blue-950 px-8 cursor-pointer"
+                        onClick={handleDescriptionUpdate}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        variant={"outline"}
+                        className="px-8"
+                        onClick={() =>
+                          editor?.commands.setContent(ticketDetails.description)
+                        }
+                      >
+                        Cancel
+                      </Button>
                     </div>
                     <div>
                       <span className="text-lg font-bold">Comments</span>
@@ -446,12 +801,15 @@ const OpenTicket = () => {
                               </TabsTrigger>
                             </TabsList>
                             <TabsContent value="all">
-                             <div className="grid gap-5">
+                              <div className="grid gap-5">
                                 {[...ticketHistoryDetails]
                                   .reverse()
                                   .map((obj, idx) => {
-                                   const user = usersData.find(u=>String(u.id) === String(obj.changed_by))
-                                   console.log("user",user)
+                                    const user = usersData.find(
+                                      (u) =>
+                                        String(u.id) === String(obj.changed_by)
+                                    );
+                                    console.log("user", user);
                                     return (
                                       <div
                                         className="flex justify-between  gap-2 w-full p-1 pb-3"
@@ -467,33 +825,40 @@ const OpenTicket = () => {
                                                 </AvatarFallback>
                                               </Avatar>
                                             </div>
-                                            {obj.old_value.trim() === "" ? (<div>
+                                            {obj.old_value.trim() === "" ? (
+                                              <div>
                                                 {/* {user?.first_name.trim()=== "" ? user.email : `${user?.first_name} ${user?.last_name}`} =====> uncomment this after getting login user  */}
-                                                <span> <strong>User</strong> Created the <strong>Card</strong></span>
-                                              </div>) :
-                                            <div className="flex gap-3 flex-col items-center ">
-                                              <div className=" w-full">
-                                                <strong className="capitalize">
-                                                  {obj.changed_by || "user"}
-                                                </strong>{" "}
-                                                changed the{" "}
-                                                <strong>
-                                                  {obj.field_name}
-                                                </strong>
-                                              </div>
-                                              
-                                              <div className="w-full flex gap-3 items-center">
-                                                <span className=" border border-green-200 px-2 py-1 text-gray-950 font-bold rounded">
-                                                  {obj.old_value}
-                                                </span>
-                                                <FontAwesomeIcon
-                                                  icon={faRightLong}
-                                                />
-                                                <span className=" border border-blue-200 px-1.5 py-1 text-blue-950 font-bold rounded">
-                                                  {obj.new_value}
+                                                <span>
+                                                  {" "}
+                                                  <strong>User</strong> Created
+                                                  the <strong>Card</strong>
                                                 </span>
                                               </div>
-                                            </div>}
+                                            ) : (
+                                              <div className="flex gap-3 flex-col items-center ">
+                                                <div className=" w-full">
+                                                  <strong className="capitalize">
+                                                    {obj.changed_by || "user"}
+                                                  </strong>{" "}
+                                                  changed the{" "}
+                                                  <strong>
+                                                    {obj.field_name}
+                                                  </strong>
+                                                </div>
+
+                                                <div className="w-full flex gap-3 items-center">
+                                                  <span className=" border border-green-200 px-2 py-1 text-gray-950 font-bold rounded">
+                                                    {obj.old_value}
+                                                  </span>
+                                                  <FontAwesomeIcon
+                                                    icon={faRightLong}
+                                                  />
+                                                  <span className=" border border-blue-200 px-1.5 py-1 text-blue-950 font-bold rounded">
+                                                    {obj.new_value}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            )}
                                           </div>
                                         </div>
 
@@ -506,15 +871,21 @@ const OpenTicket = () => {
                               </div>
                             </TabsContent>
                             <TabsContent value="comment">
-                              <TicketCommnets tktid={ticketDetails.id} usersData={usersData} />
+                              <TicketCommnets
+                                tktid={String(ticketDetails.id)}
+                                usersData={usersData}
+                              />
                             </TabsContent>
                             <TabsContent value="history">
                               <div className="grid gap-5">
                                 {[...ticketHistoryDetails]
                                   .reverse()
                                   .map((obj, idx) => {
-                                   const user = usersData.find(u=>String(u.id) === String(obj.changed_by))
-                                   console.log("user",user)
+                                    const user = usersData.find(
+                                      (u) =>
+                                        String(u.id) === String(obj.changed_by)
+                                    );
+                                    console.log("user", user);
                                     return (
                                       <div
                                         className="flex justify-between  gap-2 w-full p-1 pb-3"
@@ -530,33 +901,40 @@ const OpenTicket = () => {
                                                 </AvatarFallback>
                                               </Avatar>
                                             </div>
-                                            {obj.old_value.trim() === "" ? (<div>
+                                            {obj.old_value.trim() === "" ? (
+                                              <div>
                                                 {/* {user?.first_name.trim()=== "" ? user.email : `${user?.first_name} ${user?.last_name}`} =====> uncomment this after getting login user  */}
-                                                <span> <strong>User</strong> Created the <strong>Card</strong></span>
-                                              </div>) :
-                                            <div className="flex gap-3 flex-col items-center ">
-                                              <div className=" w-full">
-                                                <strong className="capitalize">
-                                                  {obj.changed_by || "user"}
-                                                </strong>{" "}
-                                                changed the{" "}
-                                                <strong>
-                                                  {obj.field_name}
-                                                </strong>
-                                              </div>
-                                              
-                                              <div className="w-full flex gap-3 items-center">
-                                                <span className=" border border-green-200 px-2 py-1 text-gray-950 font-bold rounded">
-                                                  {obj.old_value}
-                                                </span>
-                                                <FontAwesomeIcon
-                                                  icon={faRightLong}
-                                                />
-                                                <span className=" border border-blue-200 px-1.5 py-1 text-blue-950 font-bold rounded">
-                                                  {obj.new_value}
+                                                <span>
+                                                  {" "}
+                                                  <strong>User</strong> Created
+                                                  the <strong>Card</strong>
                                                 </span>
                                               </div>
-                                            </div>}
+                                            ) : (
+                                              <div className="flex gap-3 flex-col items-center ">
+                                                <div className=" w-full">
+                                                  <strong className="capitalize">
+                                                    {obj.changed_by || "user"}
+                                                  </strong>{" "}
+                                                  changed the{" "}
+                                                  <strong>
+                                                    {obj.field_name}
+                                                  </strong>
+                                                </div>
+
+                                                <div className="w-full flex gap-3 items-center">
+                                                  <span className=" border border-green-200 px-2 py-1 text-gray-950 font-bold rounded">
+                                                    {obj.old_value}
+                                                  </span>
+                                                  <FontAwesomeIcon
+                                                    icon={faRightLong}
+                                                  />
+                                                  <span className=" border border-blue-200 px-1.5 py-1 text-blue-950 font-bold rounded">
+                                                    {obj.new_value}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            )}
                                           </div>
                                         </div>
 
@@ -577,12 +955,12 @@ const OpenTicket = () => {
                 </div>
               </div>
               <div className=" grid gap-5 h-fit ">
-                <Card>
-                  <CardContent className="grid gap-4 p-2">
-                    <div className="flex justify-between text-sm">
-                      <p>Details</p>
-                      <p className="underline">Add To Watchlist</p>
-                    </div>
+                <Card className="pt-0">
+                  <div className="flex justify-between text-sm bg-gray-200 p-3 text-blue-950 rounded-t-xl">
+                    <p className="font-bold">Details</p>
+                    <p className="underline font-bold">Add To Watchlist</p>
+                  </div>
+                  <CardContent className="grid gap-4 px-2">
                     <div className="grid grid-cols-2">
                       <Label>Priority</Label>
                       <SelectSearch
@@ -590,7 +968,18 @@ const OpenTicket = () => {
                         title={"Select State"}
                         size={"sm"}
                         value={ticketDetails.ticket_severity}
-                        onChange={() => {}}
+                        onChange={async (val) => {
+                          setTicketDetails((prev) =>
+                            prev
+                              ? { ...prev, ticket_severity: val }
+                              : ({ ticket_severity: val } as TicketDetails)
+                          );
+                          const updated = {
+                            ...ticketDetails,
+                            ticket_severity: val,
+                          };
+                          handleEnter("ticket_severity", val);
+                        }}
                       />
                     </div>
                     <div className="grid grid-cols-2">
@@ -611,7 +1000,6 @@ const OpenTicket = () => {
                       <span className="grid">
                         <Progress className="w-full" />
                         <span className="flex justify-end text-xs">
-                          {" "}
                           0 % Completed
                         </span>
                       </span>
@@ -679,70 +1067,66 @@ const OpenTicket = () => {
                           </AvatarFallback>
                         </Avatar> */}
 
-                        
-                          <div>
-                            <Popover
-                              open={collabsOpen}
-                              onOpenChange={setCollabsOpen}
-                            >
-                              <PopoverTrigger asChild>
-                                <Avatar className="cursor-pointer">
-                                  <AvatarFallback
-                                    className="uppercase font-bold bg-blue-950 text-md text-white"
-                                    onClick={() =>
-                                      setShowSelectCollabs(!showSelectCollabs)
-                                    }
-                                  >
-                                    <FontAwesomeIcon icon={faPlus} />
-                                  </AvatarFallback>
-                                </Avatar>
-                              </PopoverTrigger>
+                        <div>
+                          <Popover
+                            open={collabsOpen}
+                            onOpenChange={setCollabsOpen}
+                          >
+                            <PopoverTrigger asChild>
+                              <Avatar className="cursor-pointer">
+                                <AvatarFallback
+                                  className="uppercase font-bold bg-blue-950 text-md text-white"
+                                  onClick={() =>
+                                    setShowSelectCollabs(!showSelectCollabs)
+                                  }
+                                >
+                                  <FontAwesomeIcon icon={faPlus} />
+                                </AvatarFallback>
+                              </Avatar>
+                            </PopoverTrigger>
 
-                              <PopoverContent className={cn("p-0 w-fit")}>
-                                <Command className="text-xs">
-                                  <CommandInput
-                                    placeholder="Search Here..."
-                                    className="h-9 text-xs"
-                                  />
-                                  <CommandList>
-                                    <CommandEmpty>
-                                      No results found.
-                                    </CommandEmpty>
+                            <PopoverContent className={cn("p-0 w-fit")}>
+                              <Command className="text-xs">
+                                <CommandInput
+                                  placeholder="Search Here..."
+                                  className="h-9 text-xs"
+                                />
+                                <CommandList>
+                                  <CommandEmpty>No results found.</CommandEmpty>
 
-                                    <CommandGroup>
-                                      {usersData.map((item) => {
-                                        const isSelected = collaborators.some(
-                                          (c) => c.user_id === item.id
-                                        );
+                                  <CommandGroup>
+                                    {usersData.map((item) => {
+                                      const isSelected = collaborators.some(
+                                        (c) => c.user_id === item.id
+                                      );
 
-                                        return (
-                                          <CommandItem
-                                            key={item.id}
-                                            className="text-xs capitalize flex items-center"
-                                            onSelect={() => handleSelect(item)}
-                                          >
-                                            <Check
-                                              className={cn(
-                                                "mr-2",
-                                                isSelected
-                                                  ? "opacity-100"
-                                                  : "opacity-0"
-                                              )}
-                                            />
+                                      return (
+                                        <CommandItem
+                                          key={item.id}
+                                          className="text-xs capitalize flex items-center"
+                                          onSelect={() => handleSelect(item)}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2",
+                                              isSelected
+                                                ? "opacity-100"
+                                                : "opacity-0"
+                                            )}
+                                          />
 
-                                            {item.first_name.trim() === ""
-                                              ? item.email
-                                              : `${item.first_name} ${item.last_name}`}
-                                          </CommandItem>
-                                        );
-                                      })}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        
+                                          {item.first_name.trim() === ""
+                                            ? item.email
+                                            : `${item.first_name} ${item.last_name}`}
+                                        </CommandItem>
+                                      );
+                                    })}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2">
@@ -806,16 +1190,28 @@ const OpenTicket = () => {
                         <div className="bg-white rounded-md border-2 border-blue-500 min-h-20 ">
                           <Textarea
                             className="resize-none border-0 outline-0 min-h-20 max-h-20 overflow-y-auto thin-scrollbar1 "
-                            // value={newTodo}
-                            // onChange={(e) => setNewTodo(e.target.value)}
-                            // onKeyDown={handleKeydown}
+                            value={newTodo}
+                            onChange={(e) => setNewTodo(e.target.value)}
+                            onKeyDown={(e) => handleKeydown(e, ticketDetails)}
                           />
                         </div>
                       </motion.div>
                     )}
-                    <Card>
-                      subtidkes
-                    </Card>
+                    <div className="w-full flex gap-2 flex-col">
+                      {subtickets.map((tkt: TicketDetails) => {
+                        return (
+                          <Card
+                            className="p-2 rounded"
+                            key={tkt.id}
+                            // onClick={()=>{
+                            //   // setOpen(false)
+                            //   navigate(`/tickets/view/${tkt.id}`)}}
+                          >
+                            <CardContent>{tkt.summary}</CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
                   </CardContent>
                 </Card>
                 <div className="flex flex-col items-end">

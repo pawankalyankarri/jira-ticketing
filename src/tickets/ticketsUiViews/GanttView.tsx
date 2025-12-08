@@ -31,6 +31,9 @@ interface GanttTicket {
   type?: "task" | "summary" | "milestone" | string;
   open?: boolean;
   details?: string;
+  ticket_state: string;
+  ticket_status: string;
+  ticket_severity: string;
 }
 
 interface LinksType {
@@ -68,7 +71,6 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
   const { EditTicket, GetTicket, CreateTicket, fetchAllTickets } = UseTickets();
 
   const StateData = [
-    "All States",
     "ToDo",
     "In Progress",
     "On Hold",
@@ -85,9 +87,11 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
       end: ticket.end_date ? new Date(ticket.end_date) : new Date(),
       progress: 0,
       parent: ticket.parent_ticket_id ? Number(ticket.parent_ticket_id) : 0,
-      type: "task",
+      type: "Task",
       details: ticket.description,
-      state: ticket.ticket_state,
+      ticket_state: ticket.ticket_state,
+      ticket_status: ticket.ticket_status,
+      ticket_severity: ticket.ticket_severity,
     }));
     return mappedTasks;
   };
@@ -159,55 +163,23 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
         });
       }
 
-      // if (children.length > 0) {
-      //   links.push({
-      //     id: linkCounter++,
-      //     source: parentId,
-      //     target: children[0].id,
-      //     type: "e2s",
-      //   });
-      // }
+      if (children.length > 0) {
+        links.push({
+          id: linkCounter++,
+          source: parentId,
+          target: children[0].id,
+          type: "e2s",
+        });
+      }
 
       children.forEach((child) => addLinksRecursively(child.id));
     };
 
-    // Start recursion from root tasks (parent = 0 or null)
     const rootTasks = tickets.filter((t) => !t.parent || t.parent === 0);
     rootTasks.forEach((root) => addLinksRecursively(root.id));
 
     return links;
   };
-
-  // const generateSubtaskLinks = (tickets: GanttTicket[]) => {
-  //   const links: LinksType[] = [];
-  //   // console.log('ticket',tickets)
-
-  //   const parentIds = Array.from(
-  //     new Set(tickets.map((t) => t.parent).filter((pid) => pid && pid !== 0))
-  //   );
-  //   // console.log('parentIds',parentIds)
-
-  //   parentIds.forEach((pid) => {
-  //     const children = tickets.filter((t) => t.parent === pid);
-  //     // .sort((a, b) => a.id - b.id);
-
-  //     // console.log('children',children)
-
-  //     for (let i = 0; i < children.length - 1; i++) {
-  //       // console.log('link',links)
-  //       // console.log('i',i)
-  //       links.push({
-  //         id: children[i].id,
-  //         source: children[i].id,
-  //         target: children[i + 1].id,
-  //         type: "e2s",
-  //       });
-  //     }
-  //   });
-  //   // console.log('links',links)
-
-  //   return links;
-  // };
 
   const GetTickets = async () => {
     // const validTasks = allTickets.map(mapTicketToTask);
@@ -219,12 +191,13 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
 
   useEffect(() => {
     GetTickets();
+    // console.log("alltickets changed gant also changing");
   }, [allTickets]); //alltickets
 
   const taskTypes = [
-    { id: "task", label: "Task" },
-    { id: "milestone", label: "Milestone" },
-    { id: "summary", label: "Project" },
+    { id: "Task", label: "Task" },
+    { id: "Milestone", label: "Milestone" },
+    { id: "Project", label: "Project" },
   ];
 
   const formAction = async (ev: {
@@ -253,23 +226,32 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
 
           const originalTicket = allTickets.find((t) => t.id === data.id);
           if (!originalTicket) return;
-
+          console.log(
+            "status",
+            data.ticket_status,
+            "severity",
+            data.ticket_severity
+          );
           const updatedTicket = {
             ...originalTicket,
             summary: data.text ?? originalTicket.summary,
             start_date: data.start?.toISOString() ?? null,
             end_date: data.end?.toISOString() ?? null,
             description: data.details ?? "",
-            ticket_state: data.state,
+            ticket_state: data.ticket_state,
+            ticket_status: data.ticket_status,
+            ticket_severity : data.ticket_severity,
             parent_ticket_id: String(data.parent ?? 0),
             update_id: String(data.id),
           };
-
+          console.log("update-task",updatedTicket)
           await EditTicket(updatedTicket, [], data.id);
 
-          apiRef.current?.exec("update-task", { id: data.id, task: data });
+          apiRef.current?.exec("update-task", { id: data.id, task: updatedTicket });
           const response = await fetchAllTickets();
           setAllTickets(response);
+          setTask(data)
+          console.log('data=====>',data)
           setTask(null);
           console.log("Updated:", data);
           toast.success("ticket Updated");
@@ -281,7 +263,7 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
         break;
       }
       case "drag-task": {
-        console.log("drag", data);
+        console.log("drag-task", data);
         break;
       }
 
@@ -311,14 +293,15 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
         }
 
         try {
+          console.log("new ticket data", data);
           const newTicket = {
             project_id: "",
             board_id: "",
             workflow_id: "",
             status_id: "",
-            ticket_status: "Open",
-            ticket_state: data.state,
-            ticket_severity: "Medium",
+            ticket_status: data.ticket_status ?? "Open",
+            ticket_state: data.ticket_state,
+            ticket_severity: data.ticket_severity ?? "Medium",
             summary: data.text,
             description: data.details,
             file_attachment: [""],
@@ -351,6 +334,9 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
             parent: data.parent || 0,
             type: "task",
             details: newTicket.description,
+            ticket_severity: newTicket.ticket_severity,
+            ticket_state: newTicket.ticket_state,
+            ticket_status: newTicket.ticket_status,
           };
 
           apiRef.current?.exec("add-task", { task: createdTask });
@@ -427,13 +413,8 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
     });
 
     api.on("update-task", async (event) => {
-      // if (!event.fromMove && !event.inProgress) {
-      //   // Not drag → ignore
-      //   console.log("Skipping form update event");
-      //   return;
-      // }
-      console.log('eventmode date drag ',event)
-      
+      console.log("eventmode date drag ", event);
+
       if (!event.diff) {
         console.log("Skipping non-drag event:", event.mode);
         return;
@@ -474,13 +455,27 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
       // );
     });
 
-    api.intercept("show-editor", (data: { id?: number }) => {
+    api.intercept("show-editor", async(data: { id?: number }) => {
       if (data.id) {
         // Editing ticket
         console.log("data edit", data);
+        console.log(allGanttTickets);
         // const tkt = all
-        const task = api.getTask(data.id);
-        console.log("task", task);
+        let task = api.getTask(data.id);
+        console.log('task',task)
+        const remaining = allTickets.find(
+          (gt: TicketDetails) => String(gt.id) === String(data.id)
+        );
+        // console.log("remain", remaining);
+        // console.log("remain before task", task);
+        if(!remaining) return
+        task = {
+          ...task,
+          ticket_severity: task?.ticket_severity ?? remaining.ticket_severity??"",
+          ticket_state: task?.ticket_state ?? remaining.ticket_state??"",
+          ticket_status: task?.ticket_status ?? remaining.ticket_status??"",
+        };
+        // console.log("task", task);
         if (task) setTask(task);
       } else {
         // creating new ticket
@@ -488,12 +483,16 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
         const tomorrow = new Date();
         tomorrow.setDate(today.getDate() + 1);
         const newTask: ITask = {
+          id: `temp//:${new Date().getSeconds()}`,
           text: "",
           start: today,
           end: tomorrow,
           progress: 0,
           parent: 0,
-          // type: "task",
+          ticket_state: "",
+          type: "Task",
+          ticket_severity: "",
+          ticket_status: "",
         };
         setTask(newTask);
         console.log("new task added");
@@ -514,10 +513,10 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col h-full w-full overflow-x-hidden overflow-y-auto "
+      className="flex flex-col h-full w-full overflow-hidden "
       // className="flex flex-col h-full min-h-0"
     >
-      <div className="flex-1 flex flex-col h-full overflow-y-auto">
+      <div className="flex-1 flex flex-col h-full ">
         <Willow>
           {/* <div className="flex-1 w-full min-h-0"> */}
           <Fullscreen>

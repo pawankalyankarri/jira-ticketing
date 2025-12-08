@@ -1,76 +1,3 @@
-// import { Card } from "@/components/ui/card";
-// import { Separator } from "@/components/ui/separator";
-// import { cn } from "@/lib/utils";
-// import type { TicketType } from "@/Zustand/TicketsStore";
-// import { faEye, faPen, faTrash } from "@fortawesome/free-solid-svg-icons";
-// import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-// import { Calendar } from "lucide-react";
-
-// interface TicketsTypeProps {
-//   tickets: TicketType[];
-// }
-
-// const DisplayTickets = ({ tickets }: TicketsTypeProps) => {
-//   return (
-//     <div className="grid gap-3 mt-3 text-xs">
-//       {tickets.map((item: TicketType) => {
-//         const date = new Date(item.start_date);
-//         const options: Intl.DateTimeFormatOptions = {
-//           month: "short",
-//           day: "2-digit",
-//         };
-//         const formatted = date.toLocaleDateString("en-US", options);
-//         return (
-//           <Card key={item.id} className="w-full h-full px-2 text-xs gap-2 ">
-//             <div className="w-full h-full flex justify-between">
-//               <span
-//                 className={cn(
-//                   "p-0.5 px-1 rounded-2xl outline-1",
-//                   item.ticket_severity === "Low"
-//                     ? "bg-green-200"
-//                     : item.ticket_severity === "High"
-//                     ? "bg-orange-200"
-//                     : item.ticket_severity === "Medium"
-//                     ? "bg-yellow-200"
-//                     : "bg-red-200"
-//                 )}
-//               >
-//                 {item.ticket_severity}
-//               </span>
-
-//               <div className="flex gap-1">
-//                 <span className="cursor-pointer">
-//                   <FontAwesomeIcon icon={faEye} />
-//                 </span>
-//                 <span className="cursor-pointer">
-//                   <FontAwesomeIcon icon={faPen} />
-//                 </span>
-//                 <span className="cursor-pointer">
-//                   <FontAwesomeIcon icon={faTrash} />
-//                 </span>
-//               </div>
-//             </div>
-//             <div className=" w-full ">
-//                 <span className="cursor-pointer pl-2">{item.ticket_id}</span>
-//             </div>
-//             <Separator className=""/>
-//             <div className="w-full h-full flex gap-2 justify-between">
-//               <span className="p-0.5 rounded-2xl outline-1">
-//                 {item.ticket_status}
-//               </span>
-//               <span className="flex gap-1">
-//                 <Calendar className="w-[15px] h-[15px]" />
-//                 {formatted}
-//               </span>
-//             </div>
-//           </Card>
-//         );
-//       })}
-//     </div>
-//   );
-// };
-
-// export default DisplayTickets;
 
 import { Card } from "@/components/ui/card";
 import { useDroppable } from "@dnd-kit/core";
@@ -83,7 +10,7 @@ import {
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 // import { motion } from "motion/react";
-import ShowSpecifiedTickets from "./ShowSpecifiedTickets";
+
 import { motion } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -94,14 +21,16 @@ import {
   type SetStateAction,
 } from "react";
 import type { TicketDetails } from "./ticketInterfaces/TicketInterfaces";
+import ShowSpecifiedTickets from "./ShowSpecifiedTickets";
 
 interface ColumnTypeProp {
   column: string;
   tickets: TicketDetails[];
   activeId?: string | null;
+  allTickets : TicketDetails[]
 }
 
-const DisplayTicket = ({ column, tickets, activeId }: ColumnTypeProp) => {
+const DisplayTicket = ({ column, tickets, activeId,allTickets }: ColumnTypeProp) => {
   const [activeColumn, setActiveColumn] = useState<string>("");
   const [newTodo, setNewTodo] = useState<string>("");
   const { setNodeRef, isOver } = useDroppable({
@@ -261,6 +190,7 @@ const DisplayTicket = ({ column, tickets, activeId }: ColumnTypeProp) => {
               >
                 <ShowSpecifiedTickets
                   item={item}
+                  allTickets={allTickets}
 
                   // isDragging={activeId === String(item.id)}
                 />

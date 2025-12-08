@@ -284,35 +284,7 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
           <div className="w-full h-full">
             {isFocused && (
               <div className="flex gap-2 mb-2 ">
-                {/* <ToggleGroup type="single">
-                  <ToggleGroupItem value="bold" className="cursor-pointer">
-                    <Bold className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="italic" className="cursor-pointer">
-                    <Italic className="h-4 w-4" />
-                  </ToggleGroupItem>
-                 <ToggleGroupItem value="underline" className="cursor-pointer">
-                    <Underline className="h-4 w-4" />
-                  </ToggleGroupItem> 
-                  <ToggleGroupItem value="strikeThrough" className="cursor-pointer">
-                    <Strikethrough className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="listOrdered" className="cursor-pointer">
-                    <ListOrdered className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="list" className="cursor-pointer">
-                    <List className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="image" className="cursor-pointer">
-                    <Image className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="atSign" className="cursor-pointer">
-                    <AtSign className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="smile" className="cursor-pointer">
-                    <Smile className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup> */}
+
 
                 <ToggleGroup type="single" className="flex gap-2">
                   {/* Bold */}

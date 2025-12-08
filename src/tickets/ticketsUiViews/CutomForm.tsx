@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { ITask } from "@svar-ui/react-gantt";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { XIcon } from "lucide-react";
+import { ChevronsUpDown, XIcon } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { SelectSearch } from "@/components/ui/SelectSearch";
 
 export interface TaskTypeOption {
   id: string;
@@ -35,6 +37,11 @@ export interface FormProps {
 export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
   const [localTask, setLocalTask] = useState<ITask>(task);
 
+    const ticketStatusData = ["Open", "Close", "Pending"];
+      const ticketSeverityData = ["Low", "Medium", "High", "Critical"];
+
+
+
   useEffect(() => {
     setLocalTask(task);
     console.log("localtask", task);
@@ -42,6 +49,14 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
   console.log('local',localTask)
 
   if (!localTask) return null;
+
+  const handleSelectChange = (name:string) =>(value:string) => {
+    console.log('name',name)
+    console.log('value',value)
+    setLocalTask((prev)=>({...prev,[name]:value}))
+     
+      
+  }
 
   return (
     <div className="fixed top-0 right-0 h-full w-105 bg-gray-50 p-5 border-l border-gray-200 shadow-lg overflow-y-auto z-50 box-border">
@@ -67,7 +82,7 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
         <input
           type="text"
           value={localTask.text}
-          onChange={(e) => setLocalTask({ ...localTask, text: e.target.value })}
+          onChange={(e) => setLocalTask((prev)=>({ ...prev, text: e.target.value }))}
           className="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
       </div>
@@ -79,7 +94,7 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
         </Label>
         <Calendar22
           date={localTask.start}
-          onChange={(date: Date) => setLocalTask({ ...localTask, start: date })}
+          onChange={(date: Date) => setLocalTask((prev)=>({ ...prev, start: date }))}
         />
       </div>
 
@@ -91,7 +106,7 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
         </Label>
         <Calendar22
           date={localTask.end}
-          onChange={(date: Date) => setLocalTask({ ...localTask, end: date })}
+          onChange={(date: Date) => setLocalTask((prev)=>({ ...prev, end: date }))}
         />
       </div>
 
@@ -101,10 +116,10 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
         <Select
           value={localTask.type}
           onValueChange={(value: string) =>
-            setLocalTask({ ...localTask, type: value })
+            setLocalTask((prev)=>({ ...prev, type: value }))
           }
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full  transition-colors hover:bg-gray-50 bg-white dark:hover:bg-white">
             <SelectValue placeholder="Select task type" />
           </SelectTrigger>
           <SelectContent>
@@ -119,15 +134,16 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
 
 
       <div className="mb-4">
-        <Label className="block mb-1 font-medium">Task State</Label>
+        <Label className="block mb-1 font-medium">State</Label>
         <Select
-          value={localTask.state}
+          value={localTask.ticket_state}
           onValueChange={(value: string) =>
-            setLocalTask({ ...localTask, state: value })
+            setLocalTask((prev)=>({...prev, ticket_state: value }))
           }
+          required
         >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select task State" />
+          <SelectTrigger className="w-full transition-colors hover:bg-gray-50 bg-white dark:hover:bg-white">
+            <SelectValue placeholder="Select Task State" />
           </SelectTrigger>
           <SelectContent>
             {taskState.map((t,idx) => (
@@ -138,6 +154,29 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
           </SelectContent>
         </Select>
       </div>
+
+      <div className="grid gap-2 mb-4">
+                              <Label>Status</Label>
+                              <SelectSearch
+                                SelectSearchData={ticketStatusData}
+                                title={"Select Status"}
+                                size={"full"}
+                                value={localTask.ticket_status??""}
+                                onChange={handleSelectChange("ticket_status")}
+                              />
+                </div>
+
+                <div className="grid gap-2 mb-4">
+                        <Label>Severity</Label>
+                        <SelectSearch
+                          SelectSearchData={ticketSeverityData}
+                          title={"Select Severity"}
+                          size={"full"}
+                          value={localTask.ticket_severity ?? ""}
+                          onChange={handleSelectChange("ticket_severity")}
+                          required={true}
+                        />
+                      </div>
 
       {/* Progress */}
 
@@ -175,7 +214,11 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
       <div className="flex justify-end">
         <button
           // onClick={() => onAction({ action: "update-task", data: localTask })}
-          onClick={() =>
+          onClick={() =>{
+            if(!localTask.ticket_state){
+              toast.warning("Select State")
+              return
+            }
             onAction({
               action:
       typeof localTask.id === "string" && localTask.id.startsWith("temp://")
@@ -183,7 +226,7 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
         : "update-task",
               data: localTask,
             })
-          }
+          }}
           className="px-4 py-2 bg-green-400 text-white font-bold rounded-md cursor-pointer hover:bg-green-400"
         >
           Save

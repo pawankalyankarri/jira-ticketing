@@ -22,6 +22,7 @@ import DisplayOrderedTickets from "./displayorderedtickets/DisplayOrderedTickets
 import TicketsHeadTab from "./ticketsHeader/TicketHeadTab";
 import GanttView from "./ticketsUiViews/GanttView";
 import type { TicketDetails } from "./ticketInterfaces/TicketInterfaces";
+import OpenTicket from "./openTicket/OpenTicket";
 
 export interface ColumnsType {
   id: string;
@@ -32,9 +33,7 @@ const TicketsDashboard = () => {
   const [allTickets, setAllTickets] = useState<TicketDetails[]>([]);
   const [noTkts, setNoTkts] = useState<boolean>(false);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"kanban" | "table" | "gantt">(
-    "kanban"
-  );
+  const [viewMode, setViewMode] = useState<"kanban" | "table" | "gantt">("kanban");
 
   const mountRef = useRef<boolean>(false);
   const { UpdateTicketStatus, fetchAllTickets, UpdateTicketHistory } =
@@ -78,7 +77,7 @@ const TicketsDashboard = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5, // only start drag if mouse moves 5px
+        distance: 0.1, // only start drag if mouse moves 5px
       },
     })
   );
@@ -102,6 +101,7 @@ const TicketsDashboard = () => {
               column={column}
               activeId={activeId}
               tickets={columnTickets}
+              allTickets = {allTickets}
             />
           );
         })}
@@ -112,6 +112,7 @@ const TicketsDashboard = () => {
                   item={
                     allTickets.find((t) => String(t.id) === String(activeId))!
                   }
+                  allTickets={allTickets}
                 />
               )
             : null}
@@ -212,7 +213,7 @@ const TicketsDashboard = () => {
 
   return (
     <div className="flex flex-col gap-1 p-4 pt-0 w-full h-full overflow-hidden">
-      <div className="w-full h-fit">
+      <div className="w-full h-fit ">
         {/* tickets header filters */}
         <Outlet />
         <TicketsHead
@@ -221,9 +222,11 @@ const TicketsDashboard = () => {
           setViewMode = {setViewMode}
         />
       </div>
-      <div className="h-fit w-full">
+      <div className="h-fit w-full ">
         <TicketsHeadTab />
       </div>
+
+      
 
       {allTickets.length === 0 ? (
         <div className="flex justify-center pt-20 h-screen">

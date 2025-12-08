@@ -77,8 +77,10 @@ const TicketsHead = ({ setTickets, setViewMode }: TicketHeadProps) => {
     const filteredTickets = res.filter(
       (item: TicketType) =>
         item.ticket_id.toLowerCase().includes(value.toLowerCase()) ||
-        item.summary.toLowerCase().includes(value.toLowerCase())
+        item.summary.toLowerCase().includes(value.toLowerCase()) ||
+        String(item.id) === String(value)
     );
+    console.log(filteredTickets);
     setTickets(filteredTickets);
   }
   const refreshTickets = async () => {
@@ -218,7 +220,14 @@ const TicketsHead = ({ setTickets, setViewMode }: TicketHeadProps) => {
           }}
           className="p-1.5 outline-1 rounded cursor-pointer"
         >
-          <FontAwesomeIcon icon={faGrip} />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <FontAwesomeIcon icon={faGrip} />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="font-bold capitalize font-serif">Kanban View</p>
+            </TooltipContent>
+          </Tooltip>
         </span>
         <span
           onClick={() => {
@@ -231,7 +240,7 @@ const TicketsHead = ({ setTickets, setViewMode }: TicketHeadProps) => {
               <FontAwesomeIcon icon={faListUl} />
             </TooltipTrigger>
             <TooltipContent>
-              <p className="font-bold capitalize font-serif">Listwise Tickets</p>
+              <p className="font-bold capitalize font-serif">List View</p>
             </TooltipContent>
           </Tooltip>
         </span>
@@ -246,7 +255,7 @@ const TicketsHead = ({ setTickets, setViewMode }: TicketHeadProps) => {
               <FontAwesomeIcon icon={faChartBar} />
             </TooltipTrigger>
             <TooltipContent>
-              <p className="font-bold capitalize font-serif">chartwise tickets</p>
+              <p className="font-bold capitalize font-serif">chart View</p>
             </TooltipContent>
           </Tooltip>
         </span>

@@ -19,8 +19,8 @@ interface DisplayOrderedTicketsProps {
 const DisplayOrderedTickets = ({ allTickets }: DisplayOrderedTicketsProps) => {
   const navigate = useNavigate()
   return (
-    <div className="h-full ">
-      <Table className="w-full table-fixed text-gray-600 overflow-y-auto">
+    <div className="h-full overflow-y-auto">
+      <Table className="w-full table-fixed text-gray-600 ">
         <TableHeader>
           <TableRow >
             <TableHead className="">TicketId</TableHead>
