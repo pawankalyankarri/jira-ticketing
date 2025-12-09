@@ -43,9 +43,11 @@ export interface TicketUpdateFormDataType {
   summary: string;
   description: string;
   file_attachment: string[];
+  type? : string;
+  progress? :number;
   comment: string;
   start_date: string | null;
-  end_date: string | null;
+  due_date: string | null;
   assignee_id: string|null;
   reporter_id: string|null;
   update_id?: string;
@@ -87,7 +89,7 @@ const UpdateTicket = () => {
     file_attachment: [],
     comment: "",
     start_date: null,
-    end_date: null,
+    due_date: null,
     assignee_id: "",
     reporter_id: "",
   });
@@ -121,7 +123,7 @@ const UpdateTicket = () => {
           file_attachment: res.file_attachment ?? [""],
           comment: res.comment,
           start_date: res.start_date,
-          end_date: res.end_date,
+          due_date: res.due_date,
           assignee_id: res.assignee_id,
           reporter_id: res.reporter_id,
           merge_status: false,
@@ -545,9 +547,9 @@ const UpdateTicket = () => {
                                 id="date"
                                 className="w-52 justify-between font-normal"
                               >
-                                {formData.end_date
+                                {formData.due_date
                                   ? new Date(
-                                      formData.end_date
+                                      formData.due_date
                                     ).toLocaleDateString()
                                   : "Select date"}
                                 <ChevronDownIcon />
@@ -560,8 +562,8 @@ const UpdateTicket = () => {
                               <Calendar
                                 mode="single"
                                 selected={
-                                  formData.end_date
-                                    ? new Date(formData.end_date)
+                                  formData.due_date
+                                    ? new Date(formData.due_date)
                                     : undefined
                                 }
                                 captionLayout="dropdown"
@@ -569,7 +571,7 @@ const UpdateTicket = () => {
                                   if (!date) return;
                                   setFormData((prev) => ({
                                     ...prev,
-                                    end_date: date.toISOString(),
+                                    due_date: date.toISOString(),
                                   }));
                                   setedOpen(false);
                                 }}
@@ -681,7 +683,7 @@ export default UpdateTicket;
 //   file_attachment: string[];
 //   comment_text: string;
 //   start_date: string | null;
-//   end_date: string | null;
+//   due_date: string | null;
 //   assignee: string;
 //   created_by: string;
 //   update_id?: string;
@@ -713,7 +715,7 @@ export default UpdateTicket;
 //     file_attachment: [],
 //     comment_text: "",
 //     start_date: null,
-//     end_date: null,
+//     due_date: null,
 //     assignee: "",
 //     created_by: "",
 //   });
@@ -766,7 +768,7 @@ export default UpdateTicket;
 //           file_attachment: res.file_attachment ?? [""],
 //           comment_text: res.comment_text,
 //           start_date: res.start_date,
-//           end_date: res.end_date,
+//           due_date: res.due_date,
 //           assignee: res.assignee,
 //           created_by: res.created_by,
 //         });
@@ -1123,9 +1125,9 @@ export default UpdateTicket;
 //                                 id="date"
 //                                 className="w-48 justify-between font-normal"
 //                               >
-//                                 {formData.end_date
+//                                 {formData.due_date
 //                                   ? new Date(
-//                                       formData.end_date
+//                                       formData.due_date
 //                                     ).toLocaleDateString()
 //                                   : "Select date"}
 //                                 <ChevronDownIcon />
@@ -1138,8 +1140,8 @@ export default UpdateTicket;
 //                               <Calendar
 //                                 mode="single"
 //                                 selected={
-//                                   formData.end_date
-//                                     ? new Date(formData.end_date)
+//                                   formData.due_date
+//                                     ? new Date(formData.due_date)
 //                                     : undefined
 //                                 }
 //                                 captionLayout="dropdown"
@@ -1147,7 +1149,7 @@ export default UpdateTicket;
 //                                   if (!date) return;
 //                                   setFormData((prev) => ({
 //                                     ...prev,
-//                                     end_date: date.toISOString(),
+//                                     due_date: date.toISOString(),
 //                                   }));
 //                                 }}
 //                               />

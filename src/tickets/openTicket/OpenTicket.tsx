@@ -232,12 +232,13 @@ const OpenTicket = () => {
       description: "",
       file_attachment: [],
       comment: "",
-      start_date: new Date(),
-      end_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      // start_date: new Date(),
+      // end_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
       assignee_id: "",
       reporter_id: "",
       parent_ticket_id: String(tkt.id),
     };
+    console.log('newtickt',newTicket)
     const res = await CreateTicket({ data: newTicket, files: [] });
     console.log("ticket created", res);
     if (res?.status === 200) {
@@ -276,12 +277,12 @@ const OpenTicket = () => {
       if (!isSelected) {
         await CreateTicketCollaborators({
           ticket_id: String(params.id),
-          user_id: [String(item.id)],
+          user_id: Number(item.id),
         });
       } else {
         await RemoveTicketCollaborator({
           ticket_id: String(params.id),
-          user_id: [String(item.id)],
+          user_id: Number(item.id),
         });
       }
     } catch (err) {
@@ -341,7 +342,7 @@ const OpenTicket = () => {
       file_attachment: tktDetails?.file_attachment,
       comment: tktDetails?.comment,
       start_date: tktDetails?.start_date,
-      end_date: tktDetails?.end_date,
+      due_date: tktDetails?.due_date,
       assignee_id: tktDetails?.assignee_id,
       reporter_id: tktDetails?.reporter_id,
       update_id: String(tktDetails.id),
@@ -1202,10 +1203,10 @@ const OpenTicket = () => {
 
                     <div className="grid grid-cols-2">
                       <Label>Due Date</Label>
-                      {ticketDetails.end_date ? (
+                      {ticketDetails.due_date ? (
                         <span className="border-2 border-red-500 w-full text-red-500 p-1 rounded">
                           <FontAwesomeIcon icon={faTriangleExclamation} />{" "}
-                          {formattedDate(ticketDetails.end_date)}
+                          {formattedDate(ticketDetails.due_date)}
                         </span>
                       ) : (
                         "NONE"

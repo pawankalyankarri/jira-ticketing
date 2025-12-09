@@ -19,7 +19,7 @@ import { type TicketDetails } from "../ticketInterfaces/TicketInterfaces";
 import { UseTickets, type TicketType } from "../hooks/UseTickets";
 import type { TicketUpdateFormDataType } from "../updateTicket/UpdateTicket";
 import { toast } from "sonner";
-import { motion } from "motion/react";
+import { motion, progress } from "motion/react";
 
 interface GanttTicket {
   id: number;
@@ -84,7 +84,7 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
       id: ticket.id,
       text: ticket.summary,
       start: ticket.start_date ? new Date(ticket.start_date) : new Date(),
-      end: ticket.end_date ? new Date(ticket.end_date) : new Date(),
+      end: ticket.due_date ? new Date(ticket.due_date) : new Date(),
       progress: 0,
       parent: ticket.parent_ticket_id ? Number(ticket.parent_ticket_id) : 0,
       type: "Task",
@@ -109,7 +109,7 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
   //       id: ticket.id,
   //       text: ticket.summary,
   //       start: ticket.start_date ? new Date(ticket.start_date) : new Date(),
-  //       end: ticket.end_date ? new Date(ticket.end_date) : new Date(),
+  //       end: ticket.due_date ? new Date(ticket.due_date) : new Date(),
   //       progress: 0,
   //       parent: parentId, // Only set parent if it's a valid non-zero number
   //       type: "task" as const,
@@ -236,11 +236,13 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
             ...originalTicket,
             summary: data.text ?? originalTicket.summary,
             start_date: data.start?.toISOString() ?? null,
-            end_date: data.end?.toISOString() ?? null,
+            due_date: data.end?.toISOString() ?? null,
             description: data.details ?? "",
+            type : data.type,
             ticket_state: data.ticket_state,
             ticket_status: data.ticket_status,
             ticket_severity : data.ticket_severity,
+            progress : data.progress,
             parent_ticket_id: String(data.parent ?? 0),
             update_id: String(data.id),
           };
@@ -307,7 +309,9 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
             file_attachment: [""],
             comment: "",
             start_date: data.start || new Date(),
-            end_date: data.end || new Date(Date.now() + 24 * 60 * 60 * 1000),
+            due_date: data.end|| new Date(Date.now() + 24 * 60 * 60 * 1000),
+            type : data.type,
+            progress :data.progress,
             assignee_id: "",
             reporter_id: "",
             parent_ticket_id: String(data.parent ?? "0"),
@@ -329,10 +333,10 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
             id: createdId,
             text: newTicket.summary,
             start: new Date(newTicket.start_date),
-            end: new Date(newTicket.end_date),
+            end: new Date(newTicket.due_date),
             progress: 0,
             parent: data.parent || 0,
-            type: "task",
+            type: "Task",
             details: newTicket.description,
             ticket_severity: newTicket.ticket_severity,
             ticket_state: newTicket.ticket_state,
@@ -391,7 +395,7 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
             ...original,
             summary: moved.text ?? original.summary,
             start_date: moved.start?.toISOString() ?? null,
-            end_date: moved.end?.toISOString() ?? null,
+            due_date: moved.end?.toISOString() ?? null,
             parent_ticket_id: String(newParentId),
             update_id: String(original.id),
             ticket_status: original.ticket_status,
@@ -437,7 +441,9 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
           description: task.details ?? "",
           summary: task.text ?? "",
           start_date: start,
-          end_date: end,
+          due_date: end,
+          type : task.type,
+          progress : task.progress,
           parent_ticket_id: String(task.parent),
           update_id: String(originalTicket.id),
         },

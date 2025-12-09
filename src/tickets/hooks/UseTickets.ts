@@ -13,13 +13,13 @@ interface UpdateTicketStatusProps {
 export type TicketType = {
   assignee_id: string;
   board_id: string;
-  due_date: any;
-  estimated_hours: any;
+  // due_date: any;
+  allocated_hours: any;
   milestone_id: string;
   parent_ticket_id: string;
   project_id: string;
   status_id: string;
-  total_hours_spent: any;
+  // total_hours_spent: any;
   workflow_id: string;
   comment_attachment_path: string;
   comment_id: string;
@@ -27,7 +27,7 @@ export type TicketType = {
   created_at: string;
   reporter_id: string;
   description: string;
-  end_date: string;
+  due_date: string;
   entity_id: string | null;
   file_attachment: string[];
   file_attachment_id: string;
@@ -73,7 +73,7 @@ interface EditTicketCommentType {
 
 interface TicketCollaboratorsType {
   ticket_id: string;
-  user_id: string[];
+  user_id: Number;
 }
 
 export const UseTickets = () => {
@@ -422,7 +422,7 @@ export const UseTickets = () => {
 
   const RemoveTicketCollaborator = useCallback(async(data:TicketCollaboratorsType)=>{
     try{
-      const res = await axios.post("/api/ticket-collaborators/delete-collabss",data)
+      const res = await axios.post("/api/ticket-collaborators/delete-collabs",data)
       console.log('res',res)
       return res.data
     }

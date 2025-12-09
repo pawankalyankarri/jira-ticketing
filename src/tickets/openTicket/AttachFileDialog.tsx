@@ -39,6 +39,7 @@ export function AttachFileDialog({
     if(files){
         const res = await AttachFile({ticket_id,files})
         console.log('res',res)
+        setAttachDialog(false)
 
     }
   }

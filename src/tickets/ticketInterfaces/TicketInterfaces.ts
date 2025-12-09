@@ -28,14 +28,17 @@ export interface TicketDetails {
   merge_status: boolean;
 
   start_date: string | null;
-  end_date: string | null;
   due_date: string | null;
+  // due_date: string | null;
+  progress : number;
+  label : string;
+  type : string;
 
   created_at: string;
   updated_at: string;
 
-  estimated_hours: number | null;
-  total_hours_spent: number | null;
+  allocated_hours: number | null;
+  // total_hours_spent: number | null;
 
   status_id: string;
   ticket_severity: string;

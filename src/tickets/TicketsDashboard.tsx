@@ -181,7 +181,7 @@ const TicketsDashboard = () => {
       file_attachment: oldTicket.file_attachment ?? [""],
       comment: oldTicket.comment,
       start_date: oldTicket.start_date,
-      end_date: oldTicket.end_date,
+      due_date: oldTicket.due_date,
       assignee_id: oldTicket.assignee_id,
       reporter_id: oldTicket.reporter_id,
     };

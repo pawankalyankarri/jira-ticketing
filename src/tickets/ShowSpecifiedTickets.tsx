@@ -329,7 +329,7 @@ const ShowSpecifiedTickets = ({
 
                         <CornerDownRight size={'14px'} />
                         <span>{ctkt.ticket_id}</span>
-                        <span>{ctkt.estimated_hours}</span>
+                        <span>{ctkt.allocated_hours}</span>
                       </div>
                     );
                   })}

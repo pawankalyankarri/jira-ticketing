@@ -50,7 +50,7 @@ export interface TicketFormDataType {
   file_attachment: string[];
   comment: string;
   start_date: string | null;
-  end_date: string | null;
+  due_date: string | null;
   assignee_id: string;
   reporter_id: string;
   parent_ticket_id:string;
@@ -83,7 +83,7 @@ const TicketCreate = () => {
     file_attachment: [],
     comment: "",
     start_date: null,
-    end_date: null,
+    due_date: null,
     assignee_id: "",
     reporter_id: "",
     parent_ticket_id : "0"
@@ -477,8 +477,8 @@ const TicketCreate = () => {
                             id="date"
                             className="w-52 justify-between font-normal"
                           >
-                            {formData.end_date
-                              ? new Date(formData.end_date).toLocaleDateString()
+                            {formData.due_date
+                              ? new Date(formData.due_date).toLocaleDateString()
                               : "Select date"}
                             <ChevronDownIcon />
                           </Button>
@@ -490,8 +490,8 @@ const TicketCreate = () => {
                           <Calendar
                             mode="single"
                             selected={
-                              formData.end_date
-                                ? new Date(formData.end_date)
+                              formData.due_date
+                                ? new Date(formData.due_date)
                                 : undefined
                             }
                             captionLayout="dropdown"
@@ -499,7 +499,7 @@ const TicketCreate = () => {
                               if (!date) return;
                               setFormData((prev) => ({
                                 ...prev,
-                                end_date: date.toISOString(),
+                                due_date: date.toISOString(),
                               }));
                               setedOpen(false)
                             }}

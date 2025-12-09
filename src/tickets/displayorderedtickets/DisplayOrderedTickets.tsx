@@ -28,7 +28,7 @@ const DisplayOrderedTickets = ({ allTickets }: DisplayOrderedTicketsProps) => {
             <TableHead className="text-center">Status</TableHead>
             <TableHead className="text-center">Milestone</TableHead>
             <TableHead className="text-center">Allocated Hours</TableHead>
-            <TableHead className=" ">Assignee</TableHead>
+            <TableHead className=" ">Reporter</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
