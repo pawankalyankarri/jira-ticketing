@@ -49,6 +49,8 @@ const ShowSpecifiedTickets = ({
 }: SpecifiedTicketsProps) => {
   const [parentTicket, setParentTicket] = useState<TicketDetails>();
   const [childTickets, setChildTicket] = useState<TicketDetails[]>([]);
+  const [openedTicket,setOpenedTicket] = useState<TicketDetails|null>(null)
+
   const navigate = useNavigate();
 
   const date = item.start_date ? new Date(item.start_date) : null;
@@ -138,6 +140,8 @@ const ShowSpecifiedTickets = ({
         }}
         className="w-full px-2 cursor-pointer flex gap-1"
       >
+
+
         <Card
           // key={item.id}
           onClick={(e) => {
@@ -308,7 +312,7 @@ const ShowSpecifiedTickets = ({
                 <div
                   className={cn(
                     "w-full overflow-y-auto thin-scrollbar1  p-0 pt-1",
-                    childTickets.length > 2 ? "h-15" : "h-8"
+                    childTickets.length > 2 ? "h-15" : "h-10"
                   )}
                 >
                   {childTickets.map((ctkt, idx) => {

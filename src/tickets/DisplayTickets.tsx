@@ -60,7 +60,7 @@ const DisplayTicket = ({ column, tickets, activeId,allTickets }: ColumnTypeProp)
       end_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
       assignee_id: "",
       reporter_id: "",
-      parent_ticket_id : ""
+      parent_ticket_id : "0"
     };
     const res = await CreateTicket({ data: newTicket, files: [] });
     console.log("ticket created", res);

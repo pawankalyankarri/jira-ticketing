@@ -34,6 +34,7 @@ const TicketsDashboard = () => {
   const [noTkts, setNoTkts] = useState<boolean>(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"kanban" | "table" | "gantt">("kanban");
+  const [openedTicket,setOpenedTicket] = useState<TicketDetails|null>(null)
 
   const mountRef = useRef<boolean>(false);
   const { UpdateTicketStatus, fetchAllTickets, UpdateTicketHistory } =
@@ -243,6 +244,9 @@ const TicketsDashboard = () => {
           )}
         >
           {views[viewMode]}
+
+            
+
 
           {/* {gridCols ? (
             <DisplayOrderedTickets allTickets={allTickets} />

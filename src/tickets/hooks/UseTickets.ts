@@ -176,6 +176,18 @@ export const UseTickets = () => {
   //   [fetchAllTickets]
   // );
 
+  const AttachFile = useCallback(async({ticket_id,files}:{ticket_id:Number;files:File|null})=>{
+       const res = await axios.post(
+          "/api/ticketing/attach-file",
+          { ticket_id: ticket_id, uploadfile: files },
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+       )
+      return res
+  },[])
+
+
   const CreateTicket = useCallback(
     async ({ data, files }: { data: any; files: File[]|null }) => {
       setLoading(true);
@@ -426,6 +438,7 @@ export const UseTickets = () => {
     fetchAllTickets,
     deleteTicket,
     UpdateTicketStatus,
+    AttachFile,
     CreateTicket,
     EditTicket,
     GetTicket,
