@@ -50,7 +50,7 @@ export interface TicketUpdateFormDataType {
   due_date: string | null;
   assignee_id: string|null;
   reporter_id: string|null;
-  update_id?: string;
+  update_id?: number;
   merge_status?: boolean;
   parent_ticket_id? : string|number
 }
@@ -190,7 +190,7 @@ const UpdateTicket = () => {
     console.log("data", formData);
     const updatedData = {
       ...formData,
-      ["update_id"]: update_id,
+      ["update_id"]: Number(update_id),
     };
 
     

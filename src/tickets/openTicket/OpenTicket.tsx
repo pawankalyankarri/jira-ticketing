@@ -6,7 +6,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction, type WheelEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+  type WheelEvent,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { UseTickets, type TicketType } from "../hooks/UseTickets";
 import { Textarea } from "@/components/ui/textarea";
@@ -86,14 +93,20 @@ import {
 } from "@/components/ui/tooltip";
 import type { TicketUpdateFormDataType } from "../updateTicket/UpdateTicket";
 import { AttachFileDialog } from "./AttachFileDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface openTicketPropsType {
-  openedTicket : TicketDetails,
-  setOpenedTicket : Dispatch<SetStateAction<TicketDetails|null>>
+  openedTicket: TicketDetails;
+  setOpenedTicket: Dispatch<SetStateAction<TicketDetails | null>>;
 }
 
 const OpenTicket = () => {
-
   const [ticketDetails, setTicketDetails] = useState<TicketDetails>();
   const [ticketHistoryDetails, setTicketHistoryDetails] = useState<
     TicketHistoryDetailsType[]
@@ -113,7 +126,7 @@ const OpenTicket = () => {
   const [subtickets, setSubTickets] = useState<TicketDetails[]>([]);
   const [parentTicket, setParentTicket] = useState<TicketDetails>();
   const [newTodo, setNewTodo] = useState<string>("");
-  const [attachDialog,setAttachDialog] = useState<boolean>(false)
+  const [attachDialog, setAttachDialog] = useState<boolean>(false);
 
   const navigate = useNavigate();
   const {
@@ -164,7 +177,7 @@ const OpenTicket = () => {
           );
           // console.log("res",res)
           // console.log('respones',response)
-          console.log("subtkts",subtkts)
+          console.log("subtkts", subtkts);
           console.log("parent tkt ====>", parent_tkt);
           setParentTicket(parent_tkt);
           setSubTickets(subtkts);
@@ -177,10 +190,20 @@ const OpenTicket = () => {
           }
           console.log("tktHistory", tktHistory);
 
-          setAssigneeDetails(response.assignee_id);
+          // setAssigneeDetails(response.assignee_id);
           const usersRes = await GetUsers();
           console.log("usersres", usersRes);
           setUsersData(usersRes.data);
+          if (response.assignee_id) {
+            // console.log('userdata',usersRes.data,response.assignee_id)
+            const assignee = usersRes.data.find(
+              (user:any) => Number(user.id) === Number(response.assignee_id)
+            );
+            // console.log('assingee=============================>',assignee)
+            setAssigneeDetails(
+              `${assignee?.first_name} ${assignee?.last_name}`
+            );
+          }
           await GetAllCollaborators();
         }
       };
@@ -238,10 +261,10 @@ const OpenTicket = () => {
       reporter_id: "",
       parent_ticket_id: String(tkt.id),
     };
-    console.log('newtickt',newTicket)
-    const res = await CreateTicket({ data: newTicket, files: [] });
+    console.log("newtickt", newTicket);
+    const res = await CreateTicket({ data: newTicket, files: null });
     console.log("ticket created", res);
-    if (res?.status === 200) {
+    if (res?.response?.status === 200) {
       window.dispatchEvent(new Event("ticketsUpdated"));
     }
 
@@ -310,7 +333,7 @@ const OpenTicket = () => {
       return;
     }
     if (!ticketDetails) return;
-    await handleEnter(ticketDetails,"description", html,);
+    await handleEnter(ticketDetails, "description", html);
     // const updatedData = {
     //   ticket_status: ticketDetails?.ticket_status,
     //   ticket_state: ticketDetails?.ticket_state,
@@ -331,9 +354,13 @@ const OpenTicket = () => {
     // console.log("res", res);
   };
 
-  const handleEnter = async (tktDetails:TicketDetails,name?: string, value?: string) => {
+  const handleEnter = async (
+    tktDetails: TicketDetails,
+    name?: string,
+    value?: string
+  ) => {
     if (!tktDetails) return;
-    const updatedData : TicketUpdateFormDataType & {[key:string]:any} = {
+    const updatedData: TicketUpdateFormDataType & { [key: string]: any } = {
       ticket_status: tktDetails?.ticket_status,
       ticket_state: tktDetails?.ticket_state,
       ticket_severity: tktDetails?.ticket_severity,
@@ -345,16 +372,16 @@ const OpenTicket = () => {
       due_date: tktDetails?.due_date,
       assignee_id: tktDetails?.assignee_id,
       reporter_id: tktDetails?.reporter_id,
-      update_id: String(tktDetails.id),
-      parent_ticket_id : String(tktDetails.parent_ticket_id),
-     
+      update_id: Number(tktDetails.id),
+      parent_ticket_id: String(tktDetails.parent_ticket_id),
     };
-    if(name&& value !== undefined){
-      updatedData[name] = value
+    if (name && value !== undefined) {
+      updatedData[name] = value;
     }
     console.log(updatedData);
     const res = await EditTicket(updatedData, [], String(tktDetails?.id));
     console.log("res", res);
+    // setAllTickets(res?.tickets)
   };
 
   const formatTimeAgo = (dateStr: string) => {
@@ -419,6 +446,11 @@ const OpenTicket = () => {
     }
   }, [editor, ticketDetails]);
 
+
+  // console.log('userdetas',usersData)
+  // console.log('ticket',ticketDetails?.assignee_id)
+  // console.log('assigndetals',assigneedetails)
+
   return (
     <Dialog
       open
@@ -439,23 +471,24 @@ const OpenTicket = () => {
                     <div className="flex gap-1">
                       <Tooltip>
                         <TooltipTrigger asChild>
-                         <div className="flex gap-1">
-                           <span
-                            className="text-gray-500 text-[10px] cursor-pointer"
-                            onClick={() => {
-                              navigate(`/tickets/view/${parentTicket?.id}`);
-                            }}
-                          >
-                            {parentTicket?.ticket_id}
-                          </span><CornerRightDown size={"14px"} />
-                         </div>
+                          <div className="flex gap-1">
+                            <span
+                              className="text-gray-500 text-[10px] cursor-pointer"
+                              onClick={() => {
+                                navigate(`/tickets/view/${parentTicket?.id}`);
+                              }}
+                            >
+                              {parentTicket?.ticket_id}
+                            </span>
+                            <CornerRightDown size={"14px"} />
+                          </div>
                         </TooltipTrigger>
-                        <TooltipContent side="top"  className=" bg-gray-800 ">
-                          <p className="text-[10px] font-bold">Open parent task detail</p>
+                        <TooltipContent side="top" className=" bg-gray-800 ">
+                          <p className="text-[10px] font-bold">
+                            Open parent task detail
+                          </p>
                         </TooltipContent>
                       </Tooltip>
-
-                      
                     </div>
                   )}
                   <span className="text-md font-bold text-blue-950">
@@ -509,7 +542,7 @@ const OpenTicket = () => {
                                 <CommandItem
                                   key={tkt.id}
                                   className="text-xs capitalize flex items-center"
-                                  onSelect={ async() => {
+                                  onSelect={async () => {
                                     const updated = isSelected
                                       ? {
                                           ...ticketDetails,
@@ -522,10 +555,9 @@ const OpenTicket = () => {
 
                                     console.log("update", updated);
                                     setTicketDetails(updated);
-                                    await handleEnter(updated)
+                                    await handleEnter(updated);
                                     // const res = await fetchAllTickets()
                                     // setAllTickets(res)
-                                    
                                   }}
                                 >
                                   <Check
@@ -546,7 +578,10 @@ const OpenTicket = () => {
                   </Popover>
                 </div>
 
-                <div className="border border-black rounded p-1 cursor-pointer" onClick={()=>setAttachDialog(!attachDialog)}>
+                <div
+                  className="border border-black rounded p-1 cursor-pointer"
+                  onClick={() => setAttachDialog(!attachDialog)}
+                >
                   <span>
                     <FontAwesomeIcon icon={faPaperclip} size={"xs"} />
                   </span>
@@ -569,7 +604,13 @@ const OpenTicket = () => {
               </div>
             </DialogTitle>
           </DialogHeader>
-          {attachDialog && <AttachFileDialog attachDialog setAttachDialog ={setAttachDialog} ticket_id = {ticketDetails.id}/>}
+          {attachDialog && (
+            <AttachFileDialog
+              attachDialog
+              setAttachDialog={setAttachDialog}
+              ticket_id={ticketDetails.id}
+            />
+          )}
           <DialogDescription
             asChild
             className="text-black py-0 h-full px-3 overflow-y-auto"
@@ -661,7 +702,11 @@ const OpenTicket = () => {
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
-                            handleEnter(ticketDetails,"summary", ticketDetails.summary,);
+                            handleEnter(
+                              ticketDetails,
+                              "summary",
+                              ticketDetails.summary
+                            );
                           }
                         }}
                         className=" resize-none min-h-10 border-0 outline-0 focus:outline-0 focus:border-0 font-bold text-blue-950 text-lg! px-0  focus:ring-0 shadow-none"
@@ -865,16 +910,7 @@ const OpenTicket = () => {
                                                 </AvatarFallback>
                                               </Avatar>
                                             </div>
-                                            {obj.old_value.trim() === "" ? (
-                                              <div>
-                                                {/* {user?.first_name.trim()=== "" ? user.email : `${user?.first_name} ${user?.last_name}`} =====> uncomment this after getting login user  */}
-                                                <span>
-                                                  {" "}
-                                                  <strong>User</strong> Created
-                                                  the <strong>Card</strong>
-                                                </span>
-                                              </div>
-                                            ) : (
+                                          
                                               <div className="flex gap-3 flex-col items-center ">
                                                 <div className=" w-full">
                                                   <strong className="capitalize">
@@ -898,7 +934,7 @@ const OpenTicket = () => {
                                                   </span>
                                                 </div>
                                               </div>
-                                            )}
+                                           
                                           </div>
                                         </div>
 
@@ -941,16 +977,14 @@ const OpenTicket = () => {
                                                 </AvatarFallback>
                                               </Avatar>
                                             </div>
-                                            {obj.old_value.trim() === "" ? (
+                                            {/* {obj.old_value.trim() === "" ? (
                                               <div>
-                                                {/* {user?.first_name.trim()=== "" ? user.email : `${user?.first_name} ${user?.last_name}`} =====> uncomment this after getting login user  */}
                                                 <span>
-                                                  {" "}
-                                                  <strong>User</strong> Created
-                                                  the <strong>Card</strong>
+                                                  
+                                                 {obj.new_value}
                                                 </span>
                                               </div>
-                                            ) : (
+                                            ) : ( */}
                                               <div className="flex gap-3 flex-col items-center ">
                                                 <div className=" w-full">
                                                   <strong className="capitalize">
@@ -974,7 +1008,7 @@ const OpenTicket = () => {
                                                   </span>
                                                 </div>
                                               </div>
-                                            )}
+                                             {/* )} */}
                                           </div>
                                         </div>
 
@@ -1018,7 +1052,7 @@ const OpenTicket = () => {
                             ...ticketDetails,
                             ticket_severity: val,
                           };
-                          handleEnter(updated,"ticket_severity", val);
+                          handleEnter(updated, "ticket_severity", val);
                         }}
                       />
                     </div>
@@ -1052,9 +1086,9 @@ const OpenTicket = () => {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2">
+                    {/* <div className="grid grid-cols-2">
                       <Label className="capitalize">assignee</Label>
-                      <span className="flex items-center gap-2 ">
+                      <div className="flex items-center gap-2 ">
                         {assigneedetails.length > 0 ? (
                           <Avatar>
                             <AvatarFallback className="uppercase font-bold bg-blue-950 text-md text-white ">
@@ -1071,13 +1105,79 @@ const OpenTicket = () => {
                         )}
 
                         <span className="uppercase">
-                          {" "}
-                          {ticketDetails.assignee_id || assigneedetails}
+                          {ticketDetails.assignee_id && assigneedetails}
                         </span>
-                      </span>
+
+                        {!ticketDetails.assignee_id && (
+                          <Select onValueChange={(val)=>{
+                             handleEnter(ticketDetails, "assignee_id", val);
+                          }}>
+                            <SelectTrigger className="w-full text-xs">
+                              <SelectValue placeholder=" select Assignee" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {usersData.map((user) => {
+                                return (
+                                  <SelectItem value={String(user.id)}>{`${user.first_name} ${user.last_name}`}</SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </div> */}
+
+                    <div className="grid grid-cols-2">
+                      <Label className="capitalize">Assignee</Label>
+
+                      <div className="flex items-center gap-2">
+                        {/* Avatar */}
+                        {assigneedetails ? (
+                          <Avatar>
+                            <AvatarFallback className="uppercase font-bold bg-blue-950 text-md text-white">
+                              {assigneedetails.split(" ").map(word=>word[0]).join("")} 
+                            </AvatarFallback>
+                          </Avatar>
+                        ) : (
+                          <span
+                            className="cursor-pointer text-xs underline text-blue-900"
+                            onClick={() => setAssigneeDetails("admin")} 
+                          >
+                            Assign to me
+                          </span>
+                        )}
+
+                        {/* Name display */}
+                        <span className="uppercase">
+                          {assigneedetails || ticketDetails.assignee_id}
+                        </span>
+
+                        {/* Select only when no assignee */}
+                        {!ticketDetails.assignee_id && !assigneedetails && (
+                          <Select
+                            onValueChange={(val) => {
+                              handleEnter(ticketDetails, "assignee_id", val);
+                            }}
+                          >
+                            <SelectTrigger className="w-full text-xs">
+                              <SelectValue placeholder="Select Assignee" />
+                            </SelectTrigger>
+
+                            <SelectContent>
+                              {usersData.map((user) => (
+                                <SelectItem
+                                  key={user.id}
+                                  value={String(user.id)}
+                                >
+                                  {user.first_name} {user.last_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
                     </div>
 
-                    
                     <div className="grid grid-cols-2 gap-1">
                       <Label>Collaborators</Label>
                       <div className="flex gap-0.5  items-center">
@@ -1185,7 +1285,6 @@ const OpenTicket = () => {
                       </div>
                     </div>
 
-
                     <div className="grid grid-cols-2">
                       <Label className="flex items-center text-black">
                         Label
@@ -1213,20 +1312,16 @@ const OpenTicket = () => {
                       )}
                     </div>
 
-                    
                     <div className="grid grid-cols-2">
                       <Label className="capitalize">reporter</Label>
                       <span className="flex items-center gap-2 ">
-                       
-                          <Avatar>
-                            <AvatarFallback className="uppercase font-bold bg-blue-950 text-md text-white ">
-                              {ticketDetails.reporter_id}
-                            </AvatarFallback>
-                          </Avatar>
-                        
+                        <Avatar>
+                          <AvatarFallback className="uppercase font-bold bg-blue-950 text-md text-white ">
+                            {ticketDetails.reporter_id}
+                          </AvatarFallback>
+                        </Avatar>
 
                         <span className="uppercase">
-                          
                           {ticketDetails.reporter_id}
                         </span>
                       </span>
@@ -1263,24 +1358,28 @@ const OpenTicket = () => {
                     <div className="w-full flex gap-2 flex-col">
                       {subtickets.map((tkt: TicketDetails) => {
                         return (
-                          <Card
-                            className="p-0 rounded"
-                            key={tkt.id}
-                            
-                          >
-                            <CardContent className="p-0" >
+                          <Card className="p-0 rounded" key={tkt.id}>
+                            <CardContent className="p-0">
                               <Textarea
-                            className="resize-none border-0 outline-0 min-h-16 max-h-20 overflow-y-auto thin-scrollbar1 "
-                            value={tkt.summary}
-                            onChange={(e)=>setSubTickets((prev)=>prev.map((item:TicketDetails)=>
-                              (item.id === tkt.id ? {...item,summary:e.target.value} : item)))}
-                            onKeyDown={(e) =>{
-                              if(e.key === "Enter"){
-                                (e.target as HTMLInputElement).blur()
-                              handleEnter(tkt,'summary',tkt.summary)};
-                              
-                               }}
-                            /></CardContent>
+                                className="resize-none border-0 outline-0 min-h-16 max-h-20 overflow-y-auto thin-scrollbar1 "
+                                value={tkt.summary}
+                                onChange={(e) =>
+                                  setSubTickets((prev) =>
+                                    prev.map((item: TicketDetails) =>
+                                      item.id === tkt.id
+                                        ? { ...item, summary: e.target.value }
+                                        : item
+                                    )
+                                  )
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    (e.target as HTMLInputElement).blur();
+                                    handleEnter(tkt, "summary", tkt.summary);
+                                  }
+                                }}
+                              />
+                            </CardContent>
                           </Card>
                         );
                       })}

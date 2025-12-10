@@ -221,7 +221,7 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
             }
             onAction({
               action:
-      typeof localTask.id === "string" && localTask.id.startsWith("temp://")
+      typeof localTask.id === "string" && localTask.id.startsWith("temp")
         ? "add-task"
         : "update-task",
               data: localTask,
