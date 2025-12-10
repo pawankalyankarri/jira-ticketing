@@ -235,9 +235,9 @@ export const UseTickets = () => {
 
         
         toast.success("Ticket created successfully");
-        await fetchAllTickets();
-
-        return response;
+        const res = await fetchAllTickets();
+        return { response:response,
+                Tickets : res}
       } catch (error) {
         console.error("Error:", error);
       } finally {
@@ -273,8 +273,12 @@ export const UseTickets = () => {
           );
 
           console.log("fileres", res);
+
+          
         }
-        return response;
+        // const tkts = await fetchAllTickets()
+        // return {response : response,tickets : tkts};
+        return response
       } catch (err) {
         console.log("edittkt", err);
       } finally {

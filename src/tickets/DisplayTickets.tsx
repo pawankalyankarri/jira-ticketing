@@ -62,9 +62,9 @@ const DisplayTicket = ({ column, tickets, activeId,allTickets }: ColumnTypeProp)
       reporter_id: "",
       // parent_ticket_id : "0"
     };
-    const res = await CreateTicket({ data: newTicket, files: [] });
+    const res = await CreateTicket({ data: newTicket, files: null });
     console.log("ticket created", res);
-    if (res?.status === 200) {
+    if (res?.response?.status === 200) {
       window.dispatchEvent(new Event("ticketsUpdated"));
     }
 

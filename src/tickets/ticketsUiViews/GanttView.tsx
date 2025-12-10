@@ -85,9 +85,9 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
       text: ticket.summary,
       start: ticket.start_date ? new Date(ticket.start_date) : new Date(),
       end: ticket.due_date ? new Date(ticket.due_date) : new Date(),
-      progress: 0,
+      progress: ticket.progress,
       parent: ticket.parent_ticket_id ? Number(ticket.parent_ticket_id) : 0,
-      type: "Task",
+      type: ticket?.type?.toLowerCase(),
       details: ticket.description,
       ticket_state: ticket.ticket_state,
       ticket_status: ticket.ticket_status,
@@ -195,9 +195,9 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
   }, [allTickets]); //alltickets
 
   const taskTypes = [
-    { id: "Task", label: "Task" },
-    { id: "Milestone", label: "Milestone" },
-    { id: "Project", label: "Project" },
+    { id: "task", label: "task" },
+    { id: "milestone", label: "milestone" },
+    { id: "summary", label: "summary" },
   ];
 
   const formAction = async (ev: {
@@ -238,22 +238,25 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
             start_date: data.start?.toISOString() ?? null,
             due_date: data.end?.toISOString() ?? null,
             description: data.details ?? "",
-            type : data.type,
+            type: data.type,
             ticket_state: data.ticket_state,
             ticket_status: data.ticket_status,
-            ticket_severity : data.ticket_severity,
-            progress : data.progress,
+            ticket_severity: data.ticket_severity,
+            progress: data.progress,
             parent_ticket_id: String(data.parent ?? 0),
-            update_id: String(data.id),
+            update_id: Number(data.id),
           };
-          console.log("update-task",updatedTicket)
+          console.log("update-task", updatedTicket);
           await EditTicket(updatedTicket, [], data.id);
 
-          apiRef.current?.exec("update-task", { id: data.id, task: updatedTicket });
+          apiRef.current?.exec("update-task", {
+            id: data.id,
+            task: updatedTicket,
+          });
           const response = await fetchAllTickets();
           setAllTickets(response);
-          setTask(data)
-          console.log('data=====>',data)
+          setTask(data);
+          console.log("data=====>", data);
           setTask(null);
           console.log("Updated:", data);
           toast.success("ticket Updated");
@@ -309,25 +312,25 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
             file_attachment: [""],
             comment: "",
             start_date: data.start || new Date(),
-            due_date: data.end|| new Date(Date.now() + 24 * 60 * 60 * 1000),
-            type : data.type,
-            progress :data.progress,
+            due_date: data.end || new Date(Date.now() + 24 * 60 * 60 * 1000),
+            type: data.type,
+            progress: data.progress,
             assignee_id: "",
             reporter_id: "",
-            parent_ticket_id: String(data.parent ?? "0"),
+            parent_ticket_id: String(data.parent),
           };
 
-          const res = await CreateTicket({ data: newTicket, files: [] });
+          const res = await CreateTicket({ data: newTicket, files: null });
           console.log("ticket created", res);
 
-          if (!res || !res.data.id) {
+          if (!res || !res.response.data.id) {
             console.error("CreateTicket response", res);
 
             // await GetTickets()
             return;
           }
 
-          const createdId = res.data.id;
+          const createdId = res.response.data.id;
 
           const createdTask: ITask = {
             id: createdId,
@@ -336,7 +339,7 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
             end: new Date(newTicket.due_date),
             progress: 0,
             parent: data.parent || 0,
-            type: "Task",
+            type: "task",
             details: newTicket.description,
             ticket_severity: newTicket.ticket_severity,
             ticket_state: newTicket.ticket_state,
@@ -344,12 +347,10 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
           };
 
           apiRef.current?.exec("add-task", { task: createdTask });
-
+          setAllTickets(res.Tickets);
           setAllGanttTickets((prev: any) => [...prev, createdTask]);
           setTask(null);
-          const response = await fetchAllTickets();
-          setAllTickets(response);
-          // await GetTickets()
+
           return;
         } catch (err) {
           console.error("Error creating ticket", err);
@@ -397,7 +398,7 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
             start_date: moved.start?.toISOString() ?? null,
             due_date: moved.end?.toISOString() ?? null,
             parent_ticket_id: String(newParentId),
-            update_id: String(original.id),
+            update_id: Number(original.id),
             ticket_status: original.ticket_status,
             ticket_state: original.ticket_state,
             ticket_severity: original.ticket_severity,
@@ -426,6 +427,8 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
 
       const task = event.task;
       console.log("Task updated after drag:", task);
+      const data = api.getTask(task.id)
+      console.log('data',data)
 
       // convert dates to string for backend
       const start = task.start ? new Date(task.start).toISOString() : "";
@@ -440,12 +443,12 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
           ...originalTicket,
           description: task.details ?? "",
           summary: task.text ?? "",
-          start_date: start,
-          due_date: end,
-          type : task.type,
-          progress : task.progress,
+          start_date: start ? start : originalTicket.start_date,
+          due_date: end ? end : originalTicket.due_date,
+          type: task.type,
+          progress: task.progress,
           parent_ticket_id: String(task.parent),
-          update_id: String(originalTicket.id),
+          update_id: Number(originalTicket.id),
         },
         [],
         task.id
@@ -461,47 +464,66 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
       // );
     });
 
-    api.intercept("show-editor", async(data: { id?: number }) => {
-      if (data.id) {
+    api.intercept("show-editor", async (data: { id?: number | string }) => {
+      console.log("datafrom show editor", data);
+
+      const table = await api.getTable();
+      console.log("table", table);
+      console.log("getstate", table.getState());
+      const selectedId = table.state?.selection?.taskIds?.[0] || 0;
+
+      let parentId = 0;
+
+      if (selectedId && typeof selectedId !== "string") {
+        parentId = selectedId; // <-- now correct parent id
+        console.log("parentticket==================>", selectedId);
+      }
+      if (data.id && typeof data.id !== "string") {
         // Editing ticket
         console.log("data edit", data);
         console.log(allGanttTickets);
         // const tkt = all
         let task = api.getTask(data.id);
-        console.log('task',task)
-        const remaining = allTickets.find(
-          (gt: TicketDetails) => String(gt.id) === String(data.id)
-        );
+        console.log("task", task);
+        // const remaining = allTickets.find(
+        //   (gt: TicketDetails) => String(gt.id) === String(data.id)
+        // );
         // console.log("remain", remaining);
         // console.log("remain before task", task);
-        if(!remaining) return
-        task = {
-          ...task,
-          ticket_severity: task?.ticket_severity ?? remaining.ticket_severity??"",
-          ticket_state: task?.ticket_state ?? remaining.ticket_state??"",
-          ticket_status: task?.ticket_status ?? remaining.ticket_status??"",
-        };
+        // if(!remaining) return
+        // task = {
+        //   ...task,
+        //   ticket_severity: task?.ticket_severity ?? remaining.ticket_severity??"",
+        //   ticket_state: task?.ticket_state ?? remaining.ticket_state??"",
+        //   ticket_status: task?.ticket_status ?? remaining.ticket_status??"",
+        // };
         // console.log("task", task);
         if (task) setTask(task);
       } else {
         // creating new ticket
+        const test = api.getTask(data.id)
+
+        console.log('test',test)
+        parentId = test.parent
+        
+
         const today = new Date(); // current date
         const tomorrow = new Date();
         tomorrow.setDate(today.getDate() + 1);
         const newTask: ITask = {
-          id: `temp//:${new Date().getSeconds()}`,
+          id: `temp//:${new Date().getTime()}`,
           text: "",
           start: today,
           end: tomorrow,
           progress: 0,
-          parent: 0,
+          parent: parentId,
           ticket_state: "",
-          type: "Task",
+          type: "task",
           ticket_severity: "",
           ticket_status: "",
         };
         setTask(newTask);
-        console.log("new task added");
+        console.log("new task added", newTask);
       }
 
       return false;
@@ -538,6 +560,7 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
                   const clickedTask = apiRef.current?.getTask(taskId);
                   if (clickedTask) setTask(clickedTask);
                 }}
+                
                 onBarDoubleClick={(taskId: number) => {
                   const clickedTask = apiRef.current?.getTask(taskId);
                   if (clickedTask) setTask(clickedTask);

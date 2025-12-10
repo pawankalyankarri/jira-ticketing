@@ -176,7 +176,7 @@ const TicketCreate = () => {
       data: formData,
       files: fileObjects,
     });
-    if (res?.status === 200) {
+    if (res?.response?.status === 200) {
       window.dispatchEvent(new Event("ticketsUpdated"));
       navigate("/tickets");
     }

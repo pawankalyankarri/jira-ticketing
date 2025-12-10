@@ -169,10 +169,10 @@ const TicketsDashboard = () => {
 
     // setTimeout(() => setActiveId(null), 0);
     setActiveId(null);
-
+    
     // update object
     const updatedTicket = {
-      update_id: String(oldTicket.id),
+      update_id: Number(oldTicket.id),
       ticket_status: oldTicket.ticket_status,
       ticket_state: newState,
       ticket_severity: oldTicket.ticket_severity,

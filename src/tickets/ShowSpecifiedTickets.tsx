@@ -36,6 +36,7 @@ import { motion } from "motion/react";
 import type { TicketDetails } from "./ticketInterfaces/TicketInterfaces";
 import { useEffect, useState } from "react";
 import OpenTicket from "./openTicket/OpenTicket";
+import { Progress } from "@/components/ui/progress";
 
 interface SpecifiedTicketsProps {
   item: TicketDetails;
@@ -49,7 +50,7 @@ const ShowSpecifiedTickets = ({
 }: SpecifiedTicketsProps) => {
   const [parentTicket, setParentTicket] = useState<TicketDetails>();
   const [childTickets, setChildTicket] = useState<TicketDetails[]>([]);
-  const [openedTicket,setOpenedTicket] = useState<TicketDetails|null>(null)
+  const [openedTicket, setOpenedTicket] = useState<TicketDetails | null>(null);
 
   const navigate = useNavigate();
 
@@ -140,8 +141,6 @@ const ShowSpecifiedTickets = ({
         }}
         className="w-full px-2 cursor-pointer flex gap-1"
       >
-
-
         <Card
           // key={item.id}
           onClick={(e) => {
@@ -193,7 +192,6 @@ const ShowSpecifiedTickets = ({
               className="flex gap-1 opacity-0 group-hover:opacity-100"
               onPointerDown={(e) => e.stopPropagation()}
             >
-              
               {/* <Tooltip>
                 <TooltipTrigger asChild>
                   <span
@@ -294,17 +292,16 @@ const ShowSpecifiedTickets = ({
                 // }}
                 onClick={() => navigate(`/tickets/view/${item.id}`)}
               >
-                
                 <span className="flex">
                   <ChevronDown size={"16px"} color="blue" />
-                <span className="text-blue-900 font-bold">
-                  {item.ticket_id}
+                  <span className="text-blue-900 font-bold">
+                    {item.ticket_id}
+                  </span>
                 </span>
+                <span className="text-xs text-gray-400">
+                  {formatTimeAgo(item.created_at)}
                 </span>
-                <span className="text-xs text-gray-400">{formatTimeAgo(item.created_at)}</span>
               </span>
-
-              
             </div>
 
             <div>
@@ -327,7 +324,7 @@ const ShowSpecifiedTickets = ({
                       >
                         {/* <Separator orientation="vertical" /> */}
 
-                        <CornerDownRight size={'14px'} />
+                        <CornerDownRight size={"14px"} />
                         <span>{ctkt.ticket_id}</span>
                         <span>{ctkt.allocated_hours}</span>
                       </div>
@@ -345,8 +342,8 @@ const ShowSpecifiedTickets = ({
             </div>
           </CardContent>
 
-          <CardFooter className="px-1 flex flex-col gap-1 mt-auto">
-            <Separator className="" />
+          <CardFooter className="px-1 flex flex-col gap-1 mt-auto text-gray-400 italic">
+            {/* <Separator className="" />
             <div className="w-full h-full flex gap-2 justify-between">
               <span className="p-0.5 rounded-2xl outline-1">
                 {item.ticket_status}
@@ -355,7 +352,16 @@ const ShowSpecifiedTickets = ({
                 <Calendar className="w-[15px] h-[15px]" />
                 {formatted}
               </span>
-            </div>
+            </div> */}
+            
+             <div className="w-full">
+              <div className="flex justify-between items-center py-1">
+                <span>{item.allocated_hours} 0/0</span>
+                <span>{item.progress}% Completed</span>
+              </div>
+               <Progress value={item.progress}  className="[&>div]:bg-blue-500 "/>
+             </div>
+            
           </CardFooter>
         </Card>
       </motion.div>
