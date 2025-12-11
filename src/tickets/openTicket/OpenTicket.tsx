@@ -38,7 +38,12 @@ import {
   Underline as ULine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { SelectSearch } from "@/components/ui/SelectSearch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -53,6 +58,7 @@ import {
   faPlusCircle,
   faRightLong,
   faTriangleExclamation,
+  faUser,
   faUsers,
   faX,
 } from "@fortawesome/free-solid-svg-icons";
@@ -100,6 +106,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import TicketHistoryFormat from "./TicketHistoryFormat";
+import { toast } from "sonner";
+import AddCollaborators from "./AddCollaborators";
 
 interface openTicketPropsType {
   openedTicket: TicketDetails;
@@ -124,9 +133,10 @@ const OpenTicket = () => {
   const [usersData, setUsersData] = useState<UsersDataType[]>([]);
   const [allTickets, setAllTickets] = useState<TicketDetails[]>([]);
   const [subtickets, setSubTickets] = useState<TicketDetails[]>([]);
-  const [parentTicket, setParentTicket] = useState<TicketDetails>();
+  const [parentTicket, setParentTicket] = useState<TicketDetails | null>();
   const [newTodo, setNewTodo] = useState<string>("");
   const [attachDialog, setAttachDialog] = useState<boolean>(false);
+  const [collabDialog, setCollabDialog] = useState<boolean>(false);
 
   const navigate = useNavigate();
   const {
@@ -197,7 +207,7 @@ const OpenTicket = () => {
           if (response.assignee_id) {
             // console.log('userdata',usersRes.data,response.assignee_id)
             const assignee = usersRes.data.find(
-              (user:any) => Number(user.id) === Number(response.assignee_id)
+              (user: any) => Number(user.id) === Number(response.assignee_id)
             );
             // console.log('assingee=============================>',assignee)
             setAssigneeDetails(
@@ -382,6 +392,19 @@ const OpenTicket = () => {
     const res = await EditTicket(updatedData, [], String(tktDetails?.id));
     console.log("res", res);
     // setAllTickets(res?.tickets)
+
+    if (res?.status === 200 && res?.data.status) {
+      // setTicketDetails(res.data);
+      toast.success(res.data.message);
+
+      // Also refresh ticket history
+      const tktHistory = await GetTicketHistory({
+        ticket_id: String(tktDetails.id),
+      });
+      if (tktHistory?.status) {
+        setTicketHistoryDetails(tktHistory.data.data);
+      }
+    }
   };
 
   const formatTimeAgo = (dateStr: string) => {
@@ -395,7 +418,7 @@ const OpenTicket = () => {
     const days = Math.floor(diff / 1000 / 60 / 60 / 24);
     // console.log(seconds,minutes,hours,days)
 
-    if (days > 7) {
+    if (days > 50) {
       return date.toLocaleDateString("en-US", {
         day: "2-digit",
         month: "long",
@@ -445,7 +468,6 @@ const OpenTicket = () => {
       editor.commands.setContent(ticketDetails.description);
     }
   }, [editor, ticketDetails]);
-
 
   // console.log('userdetas',usersData)
   // console.log('ticket',ticketDetails?.assignee_id)
@@ -525,7 +547,7 @@ const OpenTicket = () => {
                             const el = e.currentTarget as HTMLElement;
                             if (el.scrollHeight > el.clientHeight) {
                               el.scrollTop += (e as WheelEvent).deltaY;
-                              e.preventDefault();
+                              // e.preventDefault();
                             }
                           }}
                         >
@@ -555,6 +577,16 @@ const OpenTicket = () => {
 
                                     console.log("update", updated);
                                     setTicketDetails(updated);
+                                    const parent = allTickets.find(
+                                      (tkt) =>
+                                        tkt.id ===
+                                        Number(updated.parent_ticket_id)
+                                    );
+                                    if (parent) {
+                                      setParentTicket(parent);
+                                    } else {
+                                      setParentTicket(null);
+                                    }
                                     await handleEnter(updated);
                                     // const res = await fetchAllTickets()
                                     // setAllTickets(res)
@@ -611,6 +643,7 @@ const OpenTicket = () => {
               ticket_id={ticketDetails.id}
             />
           )}
+
           <DialogDescription
             asChild
             className="text-black py-0 h-full px-3 overflow-y-auto"
@@ -890,57 +923,12 @@ const OpenTicket = () => {
                                 {[...ticketHistoryDetails]
                                   .reverse()
                                   .map((obj, idx) => {
-                                    const user = usersData.find(
-                                      (u) =>
-                                        String(u.id) === String(obj.changed_by)
-                                    );
-                                    console.log("user", user);
                                     return (
-                                      <div
-                                        className="flex justify-between  gap-2 w-full p-1 pb-3"
-                                        key={idx}
-                                      >
-                                        <div className="flex  w-full gap-2 items-center a">
-                                          <div className="flex w-fit gap-3">
-                                            <div className="w-fit">
-                                              <Avatar className="">
-                                                {/* <AvatarImage src="https://github.com/shadcn.png" /> */}
-                                                <AvatarFallback className="uppercase font-bold bg-blue-950 text-md text-white  ">
-                                                  {obj.changed_by[0] || "u"}
-                                                </AvatarFallback>
-                                              </Avatar>
-                                            </div>
-                                          
-                                              <div className="flex gap-3 flex-col items-center ">
-                                                <div className=" w-full">
-                                                  <strong className="capitalize">
-                                                    {obj.changed_by || "user"}
-                                                  </strong>{" "}
-                                                  changed the{" "}
-                                                  <strong>
-                                                    {obj.field_name}
-                                                  </strong>
-                                                </div>
-
-                                                <div className="w-full flex gap-3 items-center">
-                                                  <span className=" border border-green-200 px-2 py-1 text-gray-950 font-bold rounded">
-                                                    {obj.old_value}
-                                                  </span>
-                                                  <FontAwesomeIcon
-                                                    icon={faRightLong}
-                                                  />
-                                                  <span className=" border border-blue-200 px-1.5 py-1 text-blue-950 font-bold rounded">
-                                                    {obj.new_value}
-                                                  </span>
-                                                </div>
-                                              </div>
-                                           
-                                          </div>
-                                        </div>
-
-                                        <div className="w-[50%] flex justify-end ">
-                                          {formatTimeAgo(obj.updated_at)}
-                                        </div>
+                                      <div key={idx}>
+                                        <TicketHistoryFormat
+                                          tdata={obj}
+                                          usersData={usersData}
+                                        />
                                       </div>
                                     );
                                   })}
@@ -957,64 +945,12 @@ const OpenTicket = () => {
                                 {[...ticketHistoryDetails]
                                   .reverse()
                                   .map((obj, idx) => {
-                                    const user = usersData.find(
-                                      (u) =>
-                                        String(u.id) === String(obj.changed_by)
-                                    );
-                                    console.log("user", user);
                                     return (
-                                      <div
-                                        className="flex justify-between  gap-2 w-full p-1 pb-3"
-                                        key={idx}
-                                      >
-                                        <div className="flex  w-full gap-2 items-center a">
-                                          <div className="flex w-fit gap-3">
-                                            <div className="w-fit">
-                                              <Avatar className="">
-                                                {/* <AvatarImage src="https://github.com/shadcn.png" /> */}
-                                                <AvatarFallback className="uppercase font-bold bg-blue-950 text-md text-white  ">
-                                                  {obj.changed_by[0] || "u"}
-                                                </AvatarFallback>
-                                              </Avatar>
-                                            </div>
-                                            {/* {obj.old_value.trim() === "" ? (
-                                              <div>
-                                                <span>
-                                                  
-                                                 {obj.new_value}
-                                                </span>
-                                              </div>
-                                            ) : ( */}
-                                              <div className="flex gap-3 flex-col items-center ">
-                                                <div className=" w-full">
-                                                  <strong className="capitalize">
-                                                    {obj.changed_by || "user"}
-                                                  </strong>{" "}
-                                                  changed the{" "}
-                                                  <strong>
-                                                    {obj.field_name}
-                                                  </strong>
-                                                </div>
-
-                                                <div className="w-full flex gap-3 items-center">
-                                                  <span className=" border border-green-200 px-2 py-1 text-gray-950 font-bold rounded">
-                                                    {obj.old_value}
-                                                  </span>
-                                                  <FontAwesomeIcon
-                                                    icon={faRightLong}
-                                                  />
-                                                  <span className=" border border-blue-200 px-1.5 py-1 text-blue-950 font-bold rounded">
-                                                    {obj.new_value}
-                                                  </span>
-                                                </div>
-                                              </div>
-                                             {/* )} */}
-                                          </div>
-                                        </div>
-
-                                        <div className="w-[50%] flex justify-end ">
-                                          {formatTimeAgo(obj.updated_at)}
-                                        </div>
+                                      <div key={idx}>
+                                        <TicketHistoryFormat
+                                          tdata={obj}
+                                          usersData={usersData}
+                                        />
                                       </div>
                                     );
                                   })}
@@ -1028,7 +964,7 @@ const OpenTicket = () => {
                   </div>
                 </div>
               </div>
-              <div className=" grid gap-5 h-fit ">
+              <div className=" grid gap-5 h-fit">
                 <Card className="pt-0">
                   <div className="flex justify-between text-sm bg-gray-200 p-3 text-blue-950 rounded-t-xl">
                     <p className="font-bold">Details</p>
@@ -1135,13 +1071,16 @@ const OpenTicket = () => {
                         {assigneedetails ? (
                           <Avatar>
                             <AvatarFallback className="uppercase font-bold bg-blue-950 text-md text-white">
-                              {assigneedetails.split(" ").map(word=>word[0]).join("")} 
+                              {assigneedetails
+                                .split(" ")
+                                .map((word) => word[0])
+                                .join("")}
                             </AvatarFallback>
                           </Avatar>
                         ) : (
                           <span
                             className="cursor-pointer text-xs underline text-blue-900"
-                            onClick={() => setAssigneeDetails("admin")} 
+                            onClick={() => setAssigneeDetails("admin")}
                           >
                             Assign to me
                           </span>
@@ -1222,8 +1161,19 @@ const OpenTicket = () => {
                           </AvatarFallback>
                         </Avatar> */}
 
+                        <div></div>
+                        <Avatar className="cursor-pointer">
+                          <AvatarFallback
+                            className="uppercase font-bold bg-blue-950 text-md text-white"
+                            onClick={() =>
+                              setCollabDialog(!collabDialog)
+                            }
+                          >
+                            <FontAwesomeIcon icon={faPlus} />
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
-                          <Popover
+                          {/* <Popover
                             open={collabsOpen}
                             onOpenChange={setCollabsOpen}
                           >
@@ -1280,9 +1230,19 @@ const OpenTicket = () => {
                                 </CommandList>
                               </Command>
                             </PopoverContent>
-                          </Popover>
+                          </Popover> */}
                         </div>
                       </div>
+
+                      {collabDialog && (
+                        <AddCollaborators
+                          collaborators={collaborators}
+                          usersData={usersData}
+                          setCollabDialog={setCollabDialog}
+                          setCollaborators={setCollaborators}
+                          collabDialog
+                        />
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2">
@@ -1326,63 +1286,223 @@ const OpenTicket = () => {
                         </span>
                       </span>
                     </div>
-
-                    <Card
-                      className="flex justify-between items-center flex-row! p-2 rounded cursor-pointer "
-                      onClick={() => setShowSubTaskInput(!showSubTaskInput)}
-                    >
-                      <span className="uppercase font-bold text-xs">
-                        sub Tasks
-                      </span>
-                      <span className="bg-gray-900 rounded p-1 text-white cursor-pointer ">
-                        <FontAwesomeIcon icon={faPlus} size={"1x"} />
-                      </span>
-                    </Card>
-                    {showSubTaskInput && (
-                      <motion.div
-                        className=" text-gray-900 p-0 rounded-lg shadow-lg"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                      >
-                        <div className="bg-white rounded-md border-2 border-blue-500 min-h-20 ">
-                          <Textarea
-                            className="resize-none border-0 outline-0 min-h-20 max-h-20 overflow-y-auto thin-scrollbar1 "
-                            value={newTodo}
-                            onChange={(e) => setNewTodo(e.target.value)}
-                            onKeyDown={(e) => handleKeydown(e, ticketDetails)}
-                          />
+                    <div className=" w-full">
+                      <Card className="flex justify-between items-center p-2 gap-1 rounded cursor-pointer  ">
+                        <div className="w-full flex justify-between items-center rounded cursor-pointer">
+                          {" "}
+                          <span className="uppercase font-bold text-xs">
+                            sub Tasks
+                          </span>
+                          <span
+                            className="bg-gray-900 rounded p-1 text-white cursor-pointer "
+                            onClick={() =>
+                              setShowSubTaskInput(!showSubTaskInput)
+                            }
+                          >
+                            <FontAwesomeIcon icon={faPlus} size={"1x"} />
+                          </span>
                         </div>
-                      </motion.div>
-                    )}
-                    <div className="w-full flex gap-2 flex-col">
-                      {subtickets.map((tkt: TicketDetails) => {
-                        return (
-                          <Card className="p-0 rounded" key={tkt.id}>
-                            <CardContent className="p-0">
+
+                        {showSubTaskInput && (
+                          <motion.div
+                            className=" text-gray-900 p-0 rounded-lg shadow-lg w-full"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.5 }}
+                          >
+                            <div className="bg-white rounded-md border-2 border-blue-500 min-h-20 ">
                               <Textarea
-                                className="resize-none border-0 outline-0 min-h-16 max-h-20 overflow-y-auto thin-scrollbar1 "
-                                value={tkt.summary}
-                                onChange={(e) =>
-                                  setSubTickets((prev) =>
-                                    prev.map((item: TicketDetails) =>
-                                      item.id === tkt.id
-                                        ? { ...item, summary: e.target.value }
-                                        : item
-                                    )
-                                  )
+                                className="resize-none border-0 outline-0 min-h-20 max-h-20 overflow-y-auto thin-scrollbar1 "
+                                value={newTodo}
+                                onChange={(e) => setNewTodo(e.target.value)}
+                                onKeyDown={(e) =>
+                                  handleKeydown(e, ticketDetails)
                                 }
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    (e.target as HTMLInputElement).blur();
-                                    handleEnter(tkt, "summary", tkt.summary);
-                                  }
-                                }}
                               />
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
+                            </div>
+                          </motion.div>
+                        )}
+                        <div className="w-full flex  flex-col p-0">
+                          {subtickets.map((tkt: TicketDetails) => {
+                            return (
+                              <div
+                                className="group relative w-full h-fit"
+                                key={tkt.id}
+                              >
+                                <div
+                                  className="p-0 rounded   cursor-pointer"
+                                  key={tkt.id}
+                                >
+                                  <div className="p-0 flex items-center px-2">
+                                    <div className="w-full">
+                                      <div className=" w-full flex gap-2 text-sm text-gray-900 dark:text-white">
+                                        <div>
+                                          <Avatar>
+                                            <AvatarFallback>
+                                              {tkt.assignee_id ? (
+                                                <span className="uppercase font-bold text-lg">
+                                                  {assigneedetails
+                                                    .split(" ")
+                                                    .map((ass) => ass[0])
+                                                    .join("")}
+                                                </span>
+                                              ) : (
+                                                <FontAwesomeIcon
+                                                  icon={faUser}
+                                                  size="lg"
+                                                />
+                                              )}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        </div>
+                                        <span
+                                          className=" cursor-pointer  flex flex-col"
+                                          onClick={() =>
+                                            navigate(`/tickets/view/${tkt.id}`)
+                                          }
+                                        >
+                                          <span className="flex">
+                                            <ChevronDown
+                                              size={"16px"}
+                                              color="blue"
+                                            />
+                                            <span className="text-blue-900 font-bold">
+                                              {tkt.ticket_id}
+                                            </span>
+                                          </span>
+                                          <span className="text-xs text-gray-400">
+                                            {formatTimeAgo(tkt.created_at)}
+                                          </span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="font-bold py-1 capitalize  text-wrap text-sm w-full flex items-center">
+                                      {/* {tkt.summary.length > 55
+                                      ? `${tkt.summary.slice(0, 55)}...`
+                                      : tkt.summary} */}
+
+                                      <Textarea
+                                        className="resize-none border-0 outline-0 shadow-none min-h-16 max-h-20 overflow-y-auto thin-scrollbar1 "
+                                        value={tkt.summary}
+                                        onChange={(e) =>
+                                          setSubTickets((prev) =>
+                                            prev.map((item: TicketDetails) =>
+                                              item.id === tkt.id
+                                                ? {
+                                                    ...item,
+                                                    summary: e.target.value,
+                                                  }
+                                                : item
+                                            )
+                                          )
+                                        }
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            (
+                                              e.target as HTMLInputElement
+                                            ).blur();
+                                            handleEnter(
+                                              tkt,
+                                              "summary",
+                                              tkt.summary
+                                            );
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                                <motion.div
+                                  className="hidden group-hover:block z-50 absolute  top-[-150px] w-[395px] "
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ duration: 0.5 }}
+                                >
+                                  <Card className=" p-1 rounded-lg w-full gap-1">
+                                    <div className="flex w-fit h-full gap-2">
+                                      <div onClick={(e) => e.stopPropagation()}>
+                                        <div
+                                          className="w-full flexjustify-between text-xs text-gray-400 no-drag"
+                                          onClick={() =>
+                                            navigate(
+                                              `/tickets/view/${ticketDetails.id}`
+                                            )
+                                          }
+                                        >
+                                          {ticketDetails.ticket_id}
+                                          <FontAwesomeIcon
+                                            icon={faArrowTurnDown}
+                                            className="pt-2 text-sm"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <CardContent className=" w-full p-1 ">
+                                      <div className=" w-full flex gap-2 text-sm text-gray-900 dark:text-white">
+                                        <div>
+                                          <Avatar>
+                                            <AvatarFallback>
+                                              {tkt.assignee_id ? (
+                                                <span className="uppercase font-bold text-lg">
+                                                  {assigneedetails
+                                                    .split(" ")
+                                                    .map((ass) => ass[0])
+                                                    .join("")}
+                                                </span>
+                                              ) : (
+                                                <FontAwesomeIcon
+                                                  icon={faUser}
+                                                  size="lg"
+                                                />
+                                              )}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        </div>
+                                        <span
+                                          className=" cursor-pointer  flex flex-col"
+
+                                          // onClick={() => navigate(`/tickets/view/${item.id}`)}
+                                        >
+                                          <span className="flex">
+                                            <ChevronDown
+                                              size={"16px"}
+                                              color="blue"
+                                            />
+                                            <span className="text-blue-900 font-bold">
+                                              {tkt.ticket_id}
+                                            </span>
+                                          </span>
+                                          <span className="text-xs text-gray-400">
+                                            {formatTimeAgo(tkt.created_at)}
+                                          </span>
+                                        </span>
+                                      </div>
+                                      <div className="font-bold py-1 capitalize  text-wrap text-sm">
+                                        {tkt.summary.length > 55
+                                          ? `${tkt.summary.slice(0, 55)}...`
+                                          : tkt.summary}
+                                      </div>
+                                    </CardContent>
+
+                                    <CardFooter className="p-1 py-0 flex flex-col gap-1 mt-auto text-gray-400 italic">
+                                      <div className="w-full">
+                                        <div className="flex justify-between items-center py-1">
+                                          <span>{tkt.allocated_hours} 0/0</span>
+                                          <span>{tkt.progress}% Completed</span>
+                                        </div>
+                                        <Progress
+                                          value={tkt.progress}
+                                          className="[&>div]:bg-blue-500 "
+                                        />
+                                      </div>
+                                    </CardFooter>
+                                  </Card>
+                                </motion.div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </Card>
                     </div>
                   </CardContent>
                 </Card>

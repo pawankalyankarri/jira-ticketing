@@ -12,13 +12,17 @@ import {
   faArrowTurnUp,
   faPenToSquare,
   faShare,
+  faUser,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   ArrowDown,
   Calendar,
   ChevronDown,
+  CircleUser,
   CornerDownRight,
+  User,
+  UserRound,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -33,26 +37,35 @@ import { type TicketType } from "./hooks/UseTickets";
 //   MenubarTrigger,
 // } from "@/components/ui/menubar";
 import { motion } from "motion/react";
-import type { TicketDetails } from "./ticketInterfaces/TicketInterfaces";
+import type {
+  UsersDataType,
+  TicketDetails,
+} from "./ticketInterfaces/TicketInterfaces";
 import { useEffect, useState } from "react";
 import OpenTicket from "./openTicket/OpenTicket";
 import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BoardWorkflowAPI } from "@/UserProfile/boardWorkflowAPI/BoardWorkflowAPI";
 
 interface SpecifiedTicketsProps {
   item: TicketDetails;
   isDragging?: boolean;
   allTickets: TicketDetails[];
+  usersData?: UsersDataType[];
 }
 const ShowSpecifiedTickets = ({
   item,
   isDragging,
   allTickets,
+  usersData,
 }: SpecifiedTicketsProps) => {
   const [parentTicket, setParentTicket] = useState<TicketDetails>();
   const [childTickets, setChildTicket] = useState<TicketDetails[]>([]);
-  const [openedTicket, setOpenedTicket] = useState<TicketDetails | null>(null);
+  const [assignName, setAssigneeName] = useState<string>("");
 
   const navigate = useNavigate();
+
+  const { GetUsers } = BoardWorkflowAPI();
 
   const date = item.start_date ? new Date(item.start_date) : null;
   const options: Intl.DateTimeFormatOptions = {
@@ -87,7 +100,19 @@ const ShowSpecifiedTickets = ({
     const childTkts = allTickets.filter(
       (tkt: TicketDetails) => String(tkt.parent_ticket_id) === String(item.id)
     );
+
     setChildTicket(childTkts);
+    if (usersData && item.assignee_id) {
+      console.log("item", item.assignee_id);
+      const assingee = usersData.find(
+        (user) => String(user.id) === item.assignee_id
+      );
+      setAssigneeName(`${assingee?.first_name} ${assingee?.last_name}`);
+      console.log(
+        "====================>",
+        `${assingee?.first_name} ${assingee?.last_name}`
+      );
+    }
   }, []);
 
   const formatTimeAgo = (dateStr: string) => {
@@ -101,7 +126,7 @@ const ShowSpecifiedTickets = ({
     const days = Math.floor(diff / 1000 / 60 / 60 / 24);
     // console.log(seconds,minutes,hours,days)
 
-    if (days > 7) {
+    if (days > 50) {
       return date.toLocaleDateString("en-US", {
         day: "2-digit",
         month: "long",
@@ -114,9 +139,7 @@ const ShowSpecifiedTickets = ({
     if (seconds >= 1) return `${seconds} second${seconds > 1 ? "s" : ""} ago`;
   };
 
-  // function handleEditTicket(tktid:string){
-  //     EditTicket(tktid)
-  // }
+  
 
   return (
     <>
@@ -283,7 +306,23 @@ const ShowSpecifiedTickets = ({
             </div>
           </div>
           <CardContent className="px-1 ">
-            <div className=" w-full text-sm text-gray-900 dark:text-white">
+            <div className=" w-full flex items-center text-sm text-gray-900 dark:text-white">
+              <div>
+                <Avatar>
+                  <AvatarFallback>
+                    {item.assignee_id ? (
+                      <span className="uppercase font-bold text-lg">
+                        {assignName
+                          .split(" ")
+                          .map((ass) => ass[0])
+                          .join("")}
+                      </span>
+                    ) : (
+                      <FontAwesomeIcon icon={faUser} size="lg" />
+                    )}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
               <span
                 className=" cursor-pointer  flex flex-col"
                 // onClick={(e) => {
@@ -308,14 +347,14 @@ const ShowSpecifiedTickets = ({
               {childTickets?.length > 0 ? (
                 <div
                   className={cn(
-                    "w-full overflow-y-auto thin-scrollbar1  p-0 pt-1",
+                    "w-full overflow-y-auto thin-scrollbar1  p-0 pt-1 pl-8",
                     childTickets.length > 2 ? "h-15" : "h-10"
                   )}
                 >
                   {childTickets.map((ctkt, idx) => {
                     return (
                       <div
-                        className="w-fit flex  text-xs items-center text-gray-400 "
+                        className="w-full flex text-xs justify-between items-center text-gray-400 "
                         key={idx}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -323,10 +362,14 @@ const ShowSpecifiedTickets = ({
                         }}
                       >
                         {/* <Separator orientation="vertical" /> */}
-
-                        <CornerDownRight size={"14px"} />
-                        <span>{ctkt.ticket_id}</span>
-                        <span>{ctkt.allocated_hours}</span>
+                        <div className="flex ">
+                          <CornerDownRight size={"14px"} />
+                          <span>{ctkt.ticket_id}</span>
+                          <span>{ctkt.allocated_hours}</span>
+                        </div>
+                        <div>0/0</div>
+                        <div></div>
+                        {ctkt.progress}%
                       </div>
                     );
                   })}
@@ -353,15 +396,17 @@ const ShowSpecifiedTickets = ({
                 {formatted}
               </span>
             </div> */}
-            
-             <div className="w-full">
+
+            <div className="w-full">
               <div className="flex justify-between items-center py-1">
                 <span>{item.allocated_hours} 0/0</span>
                 <span>{item.progress}% Completed</span>
               </div>
-               <Progress value={item.progress}  className="[&>div]:bg-blue-500 "/>
-             </div>
-            
+              <Progress
+                value={item.progress}
+                className="[&>div]:bg-blue-500 "
+              />
+            </div>
           </CardFooter>
         </Card>
       </motion.div>

@@ -21,8 +21,12 @@ import { cn } from "@/lib/utils";
 import DisplayOrderedTickets from "./displayorderedtickets/DisplayOrderedTickets";
 import TicketsHeadTab from "./ticketsHeader/TicketHeadTab";
 import GanttView from "./ticketsUiViews/GanttView";
-import type { TicketDetails } from "./ticketInterfaces/TicketInterfaces";
+import type {
+  TicketDetails,
+  UsersDataType,
+} from "./ticketInterfaces/TicketInterfaces";
 import OpenTicket from "./openTicket/OpenTicket";
+import { BoardWorkflowAPI } from "@/UserProfile/boardWorkflowAPI/BoardWorkflowAPI";
 
 export interface ColumnsType {
   id: string;
@@ -33,12 +37,17 @@ const TicketsDashboard = () => {
   const [allTickets, setAllTickets] = useState<TicketDetails[]>([]);
   const [noTkts, setNoTkts] = useState<boolean>(false);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"kanban" | "table" | "gantt">("kanban");
-  const [openedTicket,setOpenedTicket] = useState<TicketDetails|null>(null)
+  const [viewMode, setViewMode] = useState<"kanban" | "table" | "gantt">(
+    "kanban"
+  );
+  const [openedTicket, setOpenedTicket] = useState<TicketDetails | null>(null);
+  const [userData, setUsersData] = useState<UsersDataType[]>([]);
 
   const mountRef = useRef<boolean>(false);
   const { UpdateTicketStatus, fetchAllTickets, UpdateTicketHistory } =
     UseTickets();
+
+  const { GetUsers } = BoardWorkflowAPI();
 
   const Columns: string[] = [
     "ToDo",
@@ -51,6 +60,15 @@ const TicketsDashboard = () => {
   // console.log('loc',location.pathname)
 
   // const { tickets, getTickets } = TicketsStore();
+
+  const GetUsersData = async () => {
+    const usersRes = await GetUsers();
+    console.log("usersres", usersRes);
+    if (usersRes.data) {
+      setUsersData(usersRes.data);
+
+    }
+  };
   useEffect(() => {
     if (mountRef.current) return;
     mountRef.current = true;
@@ -62,6 +80,7 @@ const TicketsDashboard = () => {
       setAllTickets(response);
     };
     fetchingTickets();
+    GetUsersData()
   }, []);
 
   useEffect(() => {
@@ -102,7 +121,8 @@ const TicketsDashboard = () => {
               column={column}
               activeId={activeId}
               tickets={columnTickets}
-              allTickets = {allTickets}
+              allTickets={allTickets}
+              usersData = {userData}
             />
           );
         })}
@@ -169,7 +189,7 @@ const TicketsDashboard = () => {
 
     // setTimeout(() => setActiveId(null), 0);
     setActiveId(null);
-    
+
     // update object
     const updatedTicket = {
       update_id: Number(oldTicket.id),
@@ -220,14 +240,12 @@ const TicketsDashboard = () => {
         <TicketsHead
           setTickets={setAllTickets}
           tickets={allTickets}
-          setViewMode = {setViewMode}
+          setViewMode={setViewMode}
         />
       </div>
       <div className="h-fit w-full ">
         <TicketsHeadTab />
       </div>
-
-      
 
       {allTickets.length === 0 ? (
         <div className="flex justify-center pt-20 h-screen">
@@ -244,9 +262,6 @@ const TicketsDashboard = () => {
           )}
         >
           {views[viewMode]}
-
-            
-
 
           {/* {gridCols ? (
             <DisplayOrderedTickets allTickets={allTickets} />
