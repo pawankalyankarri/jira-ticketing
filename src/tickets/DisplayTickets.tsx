@@ -20,7 +20,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { TicketDetails } from "./ticketInterfaces/TicketInterfaces";
+import type { TicketDetails, UsersDataType } from "./ticketInterfaces/TicketInterfaces";
 import ShowSpecifiedTickets from "./ShowSpecifiedTickets";
 
 interface ColumnTypeProp {
@@ -28,9 +28,10 @@ interface ColumnTypeProp {
   tickets: TicketDetails[];
   activeId?: string | null;
   allTickets : TicketDetails[]
+  usersData : UsersDataType[]
 }
 
-const DisplayTicket = ({ column, tickets, activeId,allTickets }: ColumnTypeProp) => {
+const DisplayTicket = ({ column, tickets, activeId,allTickets,usersData }: ColumnTypeProp) => {
   const [activeColumn, setActiveColumn] = useState<string>("");
   const [newTodo, setNewTodo] = useState<string>("");
   const { setNodeRef, isOver } = useDroppable({
@@ -191,7 +192,7 @@ const DisplayTicket = ({ column, tickets, activeId,allTickets }: ColumnTypeProp)
                 <ShowSpecifiedTickets
                   item={item}
                   allTickets={allTickets}
-
+                  usersData = {usersData}
                   // isDragging={activeId === String(item.id)}
                 />
               </motion.div>

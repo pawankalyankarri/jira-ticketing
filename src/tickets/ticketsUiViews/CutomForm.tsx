@@ -199,7 +199,7 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
       <div className="mb-6">
         <label className="block mb-1 font-medium">Details</label>
         <Textarea
-          value={localTask.details}
+          value={  localTask.details}
           onChange={(e) =>{
             setLocalTask({ ...localTask, details: e.target.value })
             console.log(e.target.value)}
@@ -208,6 +208,7 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
           cols={6}
           className="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none h-32 "
         />
+        
       </div>
 
       {/* Buttons */}
