@@ -79,22 +79,77 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
     "Cancelled",
   ];
 
+  // const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
+  //   const mappedTasks = tickets.map((ticket) => ({
+  //     id: ticket.id,
+  //     text: ticket.summary,
+  //     start: ticket.start_date ? new Date(ticket.start_date) : new Date(),
+  //     end: ticket.due_date ? new Date(ticket.due_date) : new Date(),
+  //     progress: ticket.progress,
+  //     parent: ticket.parent_ticket_id ? Number(ticket.parent_ticket_id) : 0,
+  //     type: ticket?.type?.toLowerCase(),
+  //     details: ticket.description,
+  //     ticket_state: ticket.ticket_state,
+  //     ticket_status: ticket.ticket_status,
+  //     ticket_severity: ticket.ticket_severity,
+  //   }));
+  //   return mappedTasks;
+  // };
+
+
   const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
-    const mappedTasks = tickets.map((ticket) => ({
+  const mappedTasks: GanttTicket[] = [];
+
+  tickets.forEach((ticket) => {
+    
+    if(ticket.type === 'milestone'){
+      return
+    }
+    mappedTasks.push({
       id: ticket.id,
       text: ticket.summary,
       start: ticket.start_date ? new Date(ticket.start_date) : new Date(),
       end: ticket.due_date ? new Date(ticket.due_date) : new Date(),
       progress: ticket.progress,
       parent: ticket.parent_ticket_id ? Number(ticket.parent_ticket_id) : 0,
-      type: ticket?.type?.toLowerCase(),
+      type: ticket.type?.toLowerCase(),
       details: ticket.description,
       ticket_state: ticket.ticket_state,
       ticket_status: ticket.ticket_status,
       ticket_severity: ticket.ticket_severity,
-    }));
-    return mappedTasks;
-  };
+    });
+
+    // If this ticket has a milestone, attach it as a child
+    if (ticket.milestone_id) {
+      const milestone = tickets.find(
+        (t) => String(t.id) === String(ticket.milestone_id)
+      );
+
+      if (milestone) {
+        mappedTasks.push({
+          id: milestone.id,
+          text: milestone.summary,
+          start: milestone.start_date
+            ? new Date(milestone.start_date)
+            : new Date(),
+          end: milestone.due_date
+            ? new Date(milestone.due_date)
+            : new Date(),
+          parent: ticket.id, // FORCE it as a child
+          progress: milestone.progress,
+          type: "milestone",
+          details: milestone.description,
+          ticket_state: milestone.ticket_state,
+          ticket_status: milestone.ticket_status,
+          ticket_severity: milestone.ticket_severity,
+        });
+      }
+    }
+  });
+
+  return mappedTasks;
+};
+
 
   //   const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
   //   const mappedTasks = tickets.map((ticket) => {
@@ -296,38 +351,94 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
           setTask(null);
           return;
         }
+        if (data?.type === "milestone") {
+          console.log("data.tye", data.type);
+        }
 
         try {
           console.log("new ticket data", data);
-          const newTicket = {
-            project_id: "",
-            board_id: "",
-            workflow_id: "",
-            status_id: "",
-            ticket_status: data.ticket_status ?? "Open",
-            ticket_state: data.ticket_state,
-            ticket_severity: data.ticket_severity ?? "Medium",
-            summary: data.text,
-            description: data.details,
-            file_attachment: [""],
-            comment: "",
-            start_date: data.start || new Date(),
-            due_date: data.end || new Date(Date.now() + 24 * 60 * 60 * 1000),
-            type: data.type,
-            progress: data.progress,
-            assignee_id: "",
-            reporter_id: "",
-            parent_ticket_id: String(data.parent),
-          };
-
+          let newTicket;
+          if (data.type === "milestone") {
+            newTicket = {
+              project_id: "",
+              board_id: "",
+              workflow_id: "",
+              status_id: "",
+              ticket_status:  "Open",
+              ticket_state: "ToDo",
+              ticket_severity: "Medium",
+              summary: data.text,
+              description: data.details,
+              file_attachment: [""],
+              comment: "",
+              start_date: data.start || new Date(),
+              due_date: data.end || new Date(Date.now() + 24 * 60 * 60 * 1000),
+              type: data.type,
+              progress: 0,
+              assignee_id: "",
+              reporter_id: "",
+              parent_ticket_id: "",
+            };
+            console.log('create milestone',newTicket)
+          } else {
+            newTicket = {
+              project_id: "",
+              board_id: "",
+              workflow_id: "",
+              status_id: "",
+              ticket_status: data.ticket_status ?? "Open",
+              ticket_state: data.ticket_state ?? "ToDo",
+              ticket_severity: data.ticket_severity ?? "Medium",
+              summary: data.text,
+              description: data.details,
+              file_attachment: [""],
+              comment: "",
+              start_date: data.start || new Date(),
+              due_date: data.end || new Date(Date.now() + 24 * 60 * 60 * 1000),
+              type: data.type,
+              progress: data.progress ?? 0,
+              assignee_id: "",
+              reporter_id: "",
+              parent_ticket_id: String(data.parent),
+            };
+          }
+            const parent = allTickets.find(tkt=>String(tkt.id)=== String(data.parent))
+            
+            // if parent already having milestone then dont create the milestone
+            if(parent?.milestone_id){
+              toast.warning('This Ticket already have the Milestone!')
+              return
+            }
+            // if parent is 0 and milestone just create that but dont add that milestone id to the parent 
+            
+          // if(data.parent === 0 && data.type == "milestone"){
+          //   toast.warning("Individual MileStone is can not create here!")
+          //   return
+          // }
           const res = await CreateTicket({ data: newTicket, files: null });
           console.log("ticket created", res);
 
           if (!res || !res.response.data.id) {
             console.error("CreateTicket response", res);
-
-            // await GetTickets()
             return;
+          }
+          if(!parent){
+            console.log('no parent',parent,'creating data.parent',data.parent)
+          }
+          else if(data.type === 'milestone' && !parent?.milestone_id ){
+            // milestone and parent id ticket id
+            console.log('res milestone',res.response.data)
+            const m_obj = res.response.data.Ticket
+            const m_id = res.response.data.id
+           
+            
+            const updated = {...parent!,milestone_id : String(m_id), update_id: Number(m_obj.parent_ticket_id)}
+            const response = await EditTicket(updated,[],m_obj.parent_ticket_id)
+            console.log('response of milestone parent =====>',response)
+
+
+
+            
           }
 
           const createdId = res.response.data.id;
@@ -427,8 +538,8 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
 
       const task = event.task;
       console.log("Task updated after drag:", task);
-      const data = api.getTask(task.id)
-      console.log('data',data)
+      const data = api.getTask(task.id);
+      console.log("data", data);
 
       // convert dates to string for backend
       const start = task.start ? new Date(task.start).toISOString() : "";
@@ -501,11 +612,10 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
         if (task) setTask(task);
       } else {
         // creating new ticket
-        const test = api.getTask(data.id)
+        const test = api.getTask(data.id);
 
-        console.log('test',test)
-        parentId = test.parent
-        
+        console.log("test", test);
+        parentId = test.parent;
 
         const today = new Date(); // current date
         const tomorrow = new Date();
@@ -541,14 +651,14 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col h-full w-full overflow-hidden "
+      className="flex flex-col h-full w-full "
       // className="flex flex-col h-full min-h-0"
     >
       <div className="flex-1 flex flex-col h-full ">
         <Willow>
           {/* <div className="flex-1 w-full min-h-0"> */}
           <Fullscreen>
-            <div className="w-full sm:min-h-122  lg:h-full  flex flex-col">
+            <div className="w-full sm:min-h-120  lg:h-full  flex flex-col">
               <Gantt
                 tasks={allGanttTickets}
                 links={links}
@@ -560,7 +670,6 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
                   const clickedTask = apiRef.current?.getTask(taskId);
                   if (clickedTask) setTask(clickedTask);
                 }}
-                
                 onBarDoubleClick={(taskId: number) => {
                   const clickedTask = apiRef.current?.getTask(taskId);
                   if (clickedTask) setTask(clickedTask);

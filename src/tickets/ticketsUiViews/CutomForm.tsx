@@ -87,6 +87,21 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
         />
       </div>
 
+       <div className="mb-6">
+        <label className="block mb-1 font-medium">Details</label>
+        <Textarea
+          value={  localTask.details}
+          onChange={(e) =>{
+            setLocalTask({ ...localTask, details: e.target.value })
+            console.log(e.target.value)}
+          }
+          rows={6}
+          cols={6}
+          className="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none h-32 "
+        />
+        
+      </div>
+
       {/* Start Date */}
       <div className="mb-4">
         <Label htmlFor="start-date" className="block mb-1 font-medium">
@@ -132,8 +147,8 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
         </Select>
       </div>
 
-
-      <div className="mb-4">
+    {localTask.type !== "milestone" && 
+      (<div><div className="mb-4">
         <Label className="block mb-1 font-medium">State</Label>
         <Select
           value={localTask.ticket_state}
@@ -178,7 +193,7 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
                         />
                       </div>
 
-      {/* Progress */}
+      
 
       <div className="mb-4">
         <label className="block mb-1 font-medium">
@@ -193,30 +208,17 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
           max={100}
           className="cursor-pointer"
         />
-      </div>
+      </div></div>)}
 
-      {/* Details */}
-      <div className="mb-6">
-        <label className="block mb-1 font-medium">Details</label>
-        <Textarea
-          value={  localTask.details}
-          onChange={(e) =>{
-            setLocalTask({ ...localTask, details: e.target.value })
-            console.log(e.target.value)}
-          }
-          rows={6}
-          cols={6}
-          className="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none h-32 "
-        />
-        
-      </div>
+      
+     
 
       {/* Buttons */}
       <div className="flex justify-end">
         <button
           // onClick={() => onAction({ action: "update-task", data: localTask })}
           onClick={() =>{
-            if(!localTask.ticket_state){
+            if((localTask.type=== "task" || localTask.type === "summary") &&  !localTask.ticket_state ){
               toast.warning("Select State")
               return
             }
@@ -230,7 +232,9 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
           }}
           className="px-4 py-2 bg-green-400 text-white font-bold rounded-md cursor-pointer hover:bg-green-400"
         >
-          Save
+          {typeof localTask.id === "string" && localTask.id.startsWith("temp")
+        ? "Create"
+        : "Save"}
         </button>
 
         {/* <button

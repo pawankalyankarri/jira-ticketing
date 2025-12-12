@@ -117,6 +117,7 @@ interface openTicketPropsType {
 
 const OpenTicket = () => {
   const [ticketDetails, setTicketDetails] = useState<TicketDetails>();
+  const [milestones, setMilestones] = useState<TicketDetails[]>([]);
   const [ticketHistoryDetails, setTicketHistoryDetails] = useState<
     TicketHistoryDetailsType[]
   >([]);
@@ -137,6 +138,7 @@ const OpenTicket = () => {
   const [newTodo, setNewTodo] = useState<string>("");
   const [attachDialog, setAttachDialog] = useState<boolean>(false);
   const [collabDialog, setCollabDialog] = useState<boolean>(false);
+  const [updateSummary, setUpdateSummary] = useState<string>("");
 
   const navigate = useNavigate();
   const {
@@ -170,7 +172,7 @@ const OpenTicket = () => {
         // const response = await GetTicket(String(params.id));
         const res = await fetchAllTickets();
         setAllTickets(res);
-        const response = res.find(
+        const response = res?.find(
           (tkt: TicketDetails) => String(tkt.id) === params.id
         );
         if (!response) return;
@@ -185,6 +187,11 @@ const OpenTicket = () => {
             (tkt: TicketDetails) =>
               String(tkt.id) === String(response.parent_ticket_id)
           );
+
+          const milestoneTickets = res.filter(
+            (tkt: TicketDetails) => tkt.type === "milestone"
+          );
+
           // console.log("res",res)
           // console.log('respones',response)
           console.log("subtkts", subtkts);
@@ -192,6 +199,7 @@ const OpenTicket = () => {
           setParentTicket(parent_tkt);
           setSubTickets(subtkts);
           setTicketDetails(response);
+          setMilestones(milestoneTickets);
           const tktHistory = await GetTicketHistory({
             ticket_id: String(response.id),
           });
@@ -726,22 +734,28 @@ const OpenTicket = () => {
                       {/* <span className="text-lg font-bold">Summary</span> */}
                       <Textarea
                         value={ticketDetails.summary}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setTicketDetails((prev) => ({
                             ...prev!,
                             summary: e.target.value,
-                          }))
-                        }
+                          }));
+                          setUpdateSummary(e.target.value);
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
-                            handleEnter(
-                              ticketDetails,
-                              "summary",
-                              ticketDetails.summary
-                            );
+                            if (
+                              updateSummary.trim() !== ticketDetails.summary
+                            ) {
+                              handleEnter(
+                                ticketDetails,
+                                "summary",
+                                updateSummary
+                              );
+                            }
                           }
                         }}
+                        spellCheck={false}
                         className=" resize-none min-h-10 border-0 outline-0 focus:outline-0 focus:border-0 font-bold text-blue-950 text-lg! px-0  focus:ring-0 shadow-none"
                       />
                       {/* <p className="font-bold text-blue-950 text-lg">
@@ -976,7 +990,7 @@ const OpenTicket = () => {
                       <SelectSearch
                         SelectSearchData={ticketSeverityData}
                         title={"Select State"}
-                        size={"sm"}
+                        size={"full"}
                         value={ticketDetails.ticket_severity}
                         onChange={async (val) => {
                           setTicketDetails((prev) =>
@@ -1066,7 +1080,7 @@ const OpenTicket = () => {
                     <div className="grid grid-cols-2">
                       <Label className="capitalize">Assignee</Label>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         {/* Avatar */}
                         {assigneedetails ? (
                           <Avatar>
@@ -1095,7 +1109,14 @@ const OpenTicket = () => {
                         {!ticketDetails.assignee_id && !assigneedetails && (
                           <Select
                             onValueChange={(val) => {
+                              const user = usersData.find(
+                                (user) => String(user.id) === String(val)
+                              );
+                              setAssigneeDetails(
+                                `${user?.first_name} ${user?.last_name}`
+                              );
                               handleEnter(ticketDetails, "assignee_id", val);
+                              console.log("assgnee val", val);
                             }}
                           >
                             <SelectTrigger className="w-full text-xs">
@@ -1165,9 +1186,7 @@ const OpenTicket = () => {
                         <Avatar className="cursor-pointer">
                           <AvatarFallback
                             className="uppercase font-bold bg-blue-950 text-md text-white"
-                            onClick={() =>
-                              setCollabDialog(!collabDialog)
-                            }
+                            onClick={() => setCollabDialog(!collabDialog)}
                           >
                             <FontAwesomeIcon icon={faPlus} />
                           </AvatarFallback>
@@ -1241,6 +1260,7 @@ const OpenTicket = () => {
                           setCollabDialog={setCollabDialog}
                           setCollaborators={setCollaborators}
                           collabDialog
+                          ticketDetails={ticketDetails}
                         />
                       )}
                     </div>
@@ -1255,9 +1275,18 @@ const OpenTicket = () => {
                     </div>
                     <div className="grid grid-cols-2">
                       <Label className="flex items-center">Milestone</Label>
-                      <span className="border border-gray-500  p-1 rounded">
+                      {/* <span className="border border-gray-500  p-1 rounded">
                         None
-                      </span>
+                      </span> */}
+
+                       <SelectSearch
+                          SelectSearchData={milestones.map(t=>t.summary)}
+                          title={"Select Milestone"}
+                          size={"full"}
+                          value={""}
+                          onChange={()=>{}}
+                          required={true}
+                        />
                     </div>
 
                     <div className="grid grid-cols-2">

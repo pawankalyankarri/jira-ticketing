@@ -94,6 +94,7 @@ export const UseTickets = () => {
       console.log(res);
       if (res.status === 200) {
         setTickets(res.data.data);
+        
         return res.data.data;
       }
     } catch (err: any) {
@@ -251,7 +252,7 @@ export const UseTickets = () => {
     async (
       data: TicketUpdateFormDataType,
       fileObject: File[],
-      tktId: string
+      tktId?: string
     ) => {
       console.log("data from usetickets before calling api", data);
       setLoading(true);
@@ -262,11 +263,11 @@ export const UseTickets = () => {
         // await fetchAllTickets()
 
         
-        console.log("tktid", tktId, fileObject);
+        console.log("tktid", data.update_id, fileObject);
         if (fileObject.length !== 0) {
           const res = await axios.post(
             "/api/ticketing/attach-file",
-            { ticket_id: tktId, uploadfile: fileObject[0] },
+            { ticket_id: data.update_id, uploadfile: fileObject[0] },
             {
               headers: { "Content-Type": "multipart/form-data" },
             }

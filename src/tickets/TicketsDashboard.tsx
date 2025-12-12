@@ -40,8 +40,7 @@ const TicketsDashboard = () => {
   const [viewMode, setViewMode] = useState<"kanban" | "table" | "gantt">(
     "kanban"
   );
-  const [openedTicket, setOpenedTicket] = useState<TicketDetails | null>(null);
-  const [userData, setUsersData] = useState<UsersDataType[]>([]);
+  const [usersData, setUsersData] = useState<UsersDataType[]>([]);
 
   const mountRef = useRef<boolean>(false);
   const { UpdateTicketStatus, fetchAllTickets, UpdateTicketHistory } =
@@ -75,13 +74,16 @@ const TicketsDashboard = () => {
     // console.log("running");
     const fetchingTickets = async () => {
       const response = await fetchAllTickets();
-      if (response.length == 0) setNoTkts(true);
+      if (response?.length == 0) setNoTkts(true);
+      
 
       setAllTickets(response);
     };
     fetchingTickets();
     GetUsersData()
   }, []);
+
+  
 
   useEffect(() => {
     const handler = async () => {
@@ -101,18 +103,23 @@ const TicketsDashboard = () => {
       },
     })
   );
+  console.log('alltkts',allTickets)
+
+  const kanbanTkts = allTickets.filter((t:TicketDetails)=>t.type !== "milestone")
 
   const views = {
-    table: <DisplayOrderedTickets allTickets={allTickets} />,
-    gantt: <GanttView allTickets={allTickets} setAllTickets={setAllTickets} />,
+    table: <div className="w-full sm:min-h-full max-h-[455px] overflow-y-auto"> <DisplayOrderedTickets allTickets={kanbanTkts} usersData = {usersData} /></div>,
+    gantt: <div className="w-full sm:min-h-full max-h-[455px] overflow-y-auto"><GanttView allTickets={allTickets} setAllTickets={setAllTickets}  /></div>,
     kanban: (
+     < div className="flex-1 rounded-xl  w-full flex gap-4 overflow-x-auto">
+
       <DndContext
         sensors={sensors}
         onDragEnd={handleDragEnd}
         onDragStart={(event) => setActiveId(String(event.active.id))}
       >
         {Columns.map((column, idx) => {
-          const columnTickets = allTickets.filter(
+          const columnTickets = kanbanTkts.filter(
             (ticket: TicketDetails) => ticket.ticket_state === column
           );
           return (
@@ -121,24 +128,24 @@ const TicketsDashboard = () => {
               column={column}
               activeId={activeId}
               tickets={columnTickets}
-              allTickets={allTickets}
-              usersData = {userData}
+              allTickets={kanbanTkts}
+              usersData = {usersData}
             />
           );
         })}
         <DragOverlay dropAnimation={null}>
           {activeId
-            ? allTickets.find((t) => String(t.id) === String(activeId)) && (
+            ? kanbanTkts.find((t) => String(t.id) === String(activeId)) && (
                 <ShowSpecifiedTickets
                   item={
-                    allTickets.find((t) => String(t.id) === String(activeId))!
+                    kanbanTkts.find((t) => String(t.id) === String(activeId))!
                   }
-                  allTickets={allTickets}
+                  allTickets={kanbanTkts}
                 />
               )
             : null}
         </DragOverlay>
-      </DndContext>
+      </DndContext></div>
     ),
   };
 
@@ -258,7 +265,7 @@ const TicketsDashboard = () => {
       ) : (
         <div
           className={cn(
-            "flex-1 rounded-xl  w-full flex gap-4 text-xs overflow-x-auto"
+            "flex-1 rounded-xl  w-full flex gap-4 text-xs "
           )}
         >
           {views[viewMode]}

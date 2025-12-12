@@ -12,11 +12,13 @@ import {
 } from "@/components/ui/table";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useNavigate } from "react-router-dom";
-import type { TicketDetails } from "../ticketInterfaces/TicketInterfaces";
+import type { TicketDetails, UsersDataType } from "../ticketInterfaces/TicketInterfaces";
+import { faUser } from "@fortawesome/free-solid-svg-icons";
 interface DisplayOrderedTicketsProps {
   allTickets: TicketDetails[];
+  usersData : UsersDataType[]
 }
-const DisplayOrderedTickets = ({ allTickets }: DisplayOrderedTicketsProps) => {
+const DisplayOrderedTickets = ({ allTickets,usersData }: DisplayOrderedTicketsProps) => {
   const navigate = useNavigate()
   return (
     <div className="h-full overflow-y-auto">
@@ -33,6 +35,7 @@ const DisplayOrderedTickets = ({ allTickets }: DisplayOrderedTicketsProps) => {
         </TableHeader>
         <TableBody>
           {allTickets.map((tkt, idx) => {
+            const user = usersData.find(u=>String(u.id) === String(tkt.assignee_id))
             return (
               <TableRow key={idx} className=" h-auto min-h-[50px]" onClick={()=>navigate(`/tickets/view/${tkt.id}`)}>
                 <TableCell className="font-medium underline ">{tkt.ticket_id}</TableCell>
@@ -51,10 +54,10 @@ const DisplayOrderedTickets = ({ allTickets }: DisplayOrderedTicketsProps) => {
                 <TableCell className=" text-right flex gap-2 items-center">
                   <Avatar>
                     <AvatarFallback className="uppercase font-bold bg-blue-950 text-md text-white ">
-                      {tkt.assignee_id ? tkt.assignee_id[0]:""}
+                      {tkt.assignee_id ?  `${user?.first_name} ${user?.last_name}`.split(" ").map(w=>w[0]).join(""):<FontAwesomeIcon icon={faUser} />}
                     </AvatarFallback>
                   </Avatar>
-                  {tkt.assignee_id}
+                  {tkt.assignee_id && `${user?.first_name} ${user?.last_name}`}
                 </TableCell>
               </TableRow>
             );
