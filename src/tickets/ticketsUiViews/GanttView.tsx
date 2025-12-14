@@ -30,6 +30,7 @@ interface GanttTicket {
   parent?: number;
   type?: "task" | "summary" | "milestone" | string;
   open?: boolean;
+  original_id? : number;
   details?: string;
   ticket_state: string;
   ticket_status: string;
@@ -97,14 +98,71 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
   // };
 
 
-  const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
+//   const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
+//   const mappedTasks: GanttTicket[] = [];
+
+//   tickets.forEach((ticket) => {
+    
+//     if(ticket.type === 'milestone'){
+//       return
+//     }
+//     mappedTasks.push({
+//       id: ticket.id,
+//       text: ticket.summary,
+//       start: ticket.start_date ? new Date(ticket.start_date) : new Date(),
+//       end: ticket.due_date ? new Date(ticket.due_date) : new Date(),
+//       progress: ticket.progress,
+//       parent: ticket.parent_ticket_id ? Number(ticket.parent_ticket_id) : 0,
+//       type: ticket.type?.toLowerCase(),
+//       details: ticket.description,
+//       ticket_state: ticket.ticket_state,
+//       ticket_status: ticket.ticket_status,
+//       ticket_severity: ticket.ticket_severity,
+//     });
+
+//     // If this ticket has a milestone, attach it as a child
+//     if (ticket.milestone_id) {
+//       const milestone = tickets.find(
+//         (t) => String(t.id) === String(ticket.milestone_id)
+//       );
+
+//       if (milestone) {
+//         mappedTasks.push({
+//           id: milestone.id,
+//           text: milestone.summary,
+//           start: milestone.start_date
+//             ? new Date(milestone.start_date)
+//             : new Date(),
+//           end: milestone.due_date
+//             ? new Date(milestone.due_date)
+//             : new Date(),
+//           parent: ticket.id, // FORCE it as a child
+//           progress: milestone.progress,
+//           type: "milestone",
+//           details: milestone.description,
+//           ticket_state: milestone.ticket_state,
+//           ticket_status: milestone.ticket_status,
+//           ticket_severity: milestone.ticket_severity,
+//         });
+//       }
+//     }
+//   });
+
+//   return mappedTasks;
+// };
+
+
+const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
   const mappedTasks: GanttTicket[] = [];
+  let virtualIdCounter = -1; // Start high to avoid ID conflicts
 
   tickets.forEach((ticket) => {
-    
-    if(ticket.type === 'milestone'){
-      return
+    // Skip standalone milestones (they'll be added as children)
+    if (ticket.type === 'milestone') {
+      return;
     }
+
+    // Add the main ticket
     mappedTasks.push({
       id: ticket.id,
       text: ticket.summary,
@@ -119,15 +177,17 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
       ticket_severity: ticket.ticket_severity,
     });
 
-    // If this ticket has a milestone, attach it as a child
+    // If this ticket has a milestone, create a UNIQUE instance for this ticket
     if (ticket.milestone_id) {
       const milestone = tickets.find(
         (t) => String(t.id) === String(ticket.milestone_id)
       );
 
       if (milestone) {
+        // Create a VIRTUAL milestone with a unique ID
+        // This allows the same milestone to appear under multiple parents
         mappedTasks.push({
-          id: milestone.id,
+          id: virtualIdCounter--, // Virtual unique ID
           text: milestone.summary,
           start: milestone.start_date
             ? new Date(milestone.start_date)
@@ -135,13 +195,15 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
           end: milestone.due_date
             ? new Date(milestone.due_date)
             : new Date(),
-          parent: ticket.id, // FORCE it as a child
+          parent: ticket.id, // This milestone is a child of THIS ticket
           progress: milestone.progress,
-          type: "milestone",
+          original_id : milestone.id,
+          type: milestone.type ?? "milestone",
           details: milestone.description,
           ticket_state: milestone.ticket_state,
           ticket_status: milestone.ticket_status,
           ticket_severity: milestone.ticket_severity,
+
         });
       }
     }
@@ -150,57 +212,6 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
   return mappedTasks;
 };
 
-
-  //   const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
-  //   const mappedTasks = tickets.map((ticket) => {
-  //     // Convert parent_ticket_id properly
-  //     let parentId = 0;
-  //     if (ticket.parent_ticket_id) {
-  //       const parsed = Number(ticket.parent_ticket_id);
-  //       parentId = isNaN(parsed) || parsed === 0 ? 0 : parsed;
-  //     }
-
-  //     return {
-  //       id: ticket.id,
-  //       text: ticket.summary,
-  //       start: ticket.start_date ? new Date(ticket.start_date) : new Date(),
-  //       end: ticket.due_date ? new Date(ticket.due_date) : new Date(),
-  //       progress: 0,
-  //       parent: parentId, // Only set parent if it's a valid non-zero number
-  //       type: "task" as const,
-  //       details: ticket.description,
-  //     };
-  //   });
-
-  //   return mappedTasks;
-  // };
-
-  // const generateSubtaskLinks = (tickets: GanttTicket[]) => {
-  //   const links: LinksType[] = [];
-  //   let linkCounter = 1;
-
-  //   // Get all parents that have children
-  //   const parentIds = Array.from(
-  //     new Set(tickets.map(t => t.parent).filter(pid => pid && pid !== 0))
-  //   );
-
-  //   parentIds.forEach(parentId => {
-  //     const children = tickets
-  //       .filter(t => t.parent === parentId)
-  //       // .sort((a, b) => a.start.getTime() - b.start.getTime()); // sort by start date
-
-  //     for (let i = 0; i < children.length - 1; i++) {
-  //       links.push({
-  //         id: linkCounter++, // unique link id
-  //         source: children[i].id,
-  //         target: children[i + 1].id,
-  //         type: "e2s", // end-to-start
-  //       });
-  //     }
-  //   });
-
-  //   return links;
-  // };
 
   const generateSubtaskLinks = (tickets: GanttTicket[]): LinksType[] => {
     const links: LinksType[] = [];
@@ -236,18 +247,38 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
     return links;
   };
 
-  const GetTickets = async () => {
-    // const validTasks = allTickets.map(mapTicketToTask);
-    const validTasks = mapTicketsToTasks(allTickets);
-    setLinks(generateSubtaskLinks(validTasks));
-    setAllGanttTickets(validTasks);
-    // console.log('after create it is runnnig')
-  };
+  // const GetTickets = async () => {
+  //   // const validTasks = allTickets.map(mapTicketToTask);
+  //   const validTasks = mapTicketsToTasks(allTickets);
+  //   setLinks(generateSubtaskLinks(validTasks));
+  //   setAllGanttTickets(validTasks);
+  //   // console.log('after create it is runnnig')
+  // };
 
-  useEffect(() => {
-    GetTickets();
-    // console.log("alltickets changed gant also changing");
-  }, [allTickets]); //alltickets
+  
+
+  // useEffect(() => {
+  //   GetTickets();
+  //   // console.log("alltickets changed gant also changing");
+  // }, [allTickets]); //alltickets
+
+
+  const GetTickets = async () => {
+  const validTasks = mapTicketsToTasks(allTickets);
+  setAllGanttTickets(validTasks); //  only set tasks here
+};
+
+useEffect(() => {
+  GetTickets();
+}, [allTickets]);
+
+useEffect(() => {
+  if (allGanttTickets.length > 0) {
+    const generatedLinks = generateSubtaskLinks(allGanttTickets);
+    setLinks(generatedLinks);
+  }
+}, [allGanttTickets]);
+
 
   const taskTypes = [
     { id: "task", label: "task" },
@@ -475,19 +506,31 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
   const init = async (api: IApi) => {
     apiRef.current = api;
 
-    // api.on("move-task", async (task) => {
-    //   console.log("Task moved (possibly re-parented):", task);
+
 
     api.on("move-task", async (event) => {
       if (event.inProgress) return;
 
       console.log("Move event:", event);
 
-      const movedId = event.id;
-      const siblingId = event.target;
+      let movedId = event.id;
+      // if(event.id<0){
+      //   const tktobj = allGanttTickets.find((t:GanttTicket)=>t.id === event.id)
+      //   console.log('allgantt',allGanttTickets,'and tktobj',tktobj)
+      //   movedId = tktobj?.original_id
+        
 
+      // }
+      const siblingId = event.target;
+      console.log('moveid',movedId)
       const moved = api.getTask(movedId);
+      console.log('moved',moved)
+     
       if (!moved) return;
+       if(moved.type === 'milestone'){
+        toast.warning("Unable to drag the milestones!")
+        return;
+      }
 
       const sibling = siblingId ? api.getTask(siblingId) : null;
 
@@ -497,8 +540,9 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
       console.log("new parent:", newParentId);
 
       moved.parent = newParentId;
-
+         
       const original = allTickets.find((t) => t.id === movedId);
+      
       if (!original) return;
 
       try {
@@ -540,12 +584,22 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
       console.log("Task updated after drag:", task);
       const data = api.getTask(task.id);
       console.log("data", data);
+      console.log('taskoroingla',task.original_id)
 
       // convert dates to string for backend
       const start = task.start ? new Date(task.start).toISOString() : "";
       const end = task.end ? new Date(task.end).toISOString() : "";
+      const progress = task.progress
 
-      const originalTicket = allTickets.find((t) => t.id === task.id);
+      let originalTicket ;
+
+      if(task.id>0){
+        originalTicket = allTickets.find((t) => t.id === task.id);
+      }else{
+        originalTicket = allTickets.find((t) => t.id === task.original_id);
+
+      }
+      console.log('original',originalTicket)
       if (!originalTicket) return;
       console.log("start and edn", start, end);
 
@@ -557,7 +611,7 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
           start_date: start ? start : originalTicket.start_date,
           due_date: end ? end : originalTicket.due_date,
           type: task.type,
-          progress: task.progress,
+          progress: progress ? progress : task.progress,
           parent_ticket_id: String(task.parent),
           update_id: Number(originalTicket.id),
         },
@@ -574,6 +628,53 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
       //   )
       // );
     });
+
+// api.on("update-task", async (event) => {
+
+//   //  DO NOTHING while dragging
+//   if (event.inProgress) return;
+
+//   // optional: ensure something actually changed
+//   if (!event.diff) return;
+
+//   const task = event.task;
+
+//   const backendId =
+//     task.id > 0 ? task.id : task.original_id;
+
+//   const originalTicket = allTickets.find(
+//     (t) => Number(t.id) === Number(backendId)
+//   );
+//   if (!originalTicket) return;
+
+//   const start = task.start
+//     ? new Date(task.start).toISOString()
+//     : originalTicket.start_date;
+
+//   const end = task.end
+//     ? new Date(task.end).toISOString()
+//     : originalTicket.due_date;
+
+//   await EditTicket(
+//     {
+//       ...originalTicket,
+//       summary: task.text ?? originalTicket.summary,
+//       description: task.details ?? originalTicket.description,
+//       start_date: start,
+//       due_date: end,
+//       progress: task.progress,
+//       parent_ticket_id: String(task.parent),
+//       update_id: backendId,
+//     },
+//     [],
+//     backendId
+//   );
+
+//   const response = await fetchAllTickets();
+//   setAllTickets(response);
+// });
+
+
 
     api.intercept("show-editor", async (data: { id?: number | string }) => {
       console.log("datafrom show editor", data);
