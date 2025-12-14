@@ -26,6 +26,7 @@ import {
   Bold,
   Check,
   ChevronDown,
+  ChevronsUpDown,
   CornerDownLeft,
   CornerDownRight,
   CornerRightDown,
@@ -124,6 +125,7 @@ const OpenTicket = () => {
   const [createdDateStr, setCreatedDateStr] = useState<string>("");
   const [createdTimeStr, setCreatedTimeStr] = useState<string>("");
   const [open, setOpen] = useState<boolean>(true);
+  const [mileOpen,setMileOpen] = useState<boolean>(false)
   const [collabsOpen, setCollabsOpen] = useState<boolean>(true);
   const [collaborators, setCollaborators] = useState<
     TicketCollaboratorsDataType[]
@@ -339,6 +341,24 @@ const OpenTicket = () => {
     }
     console.log("collabs after select", collaborators);
   };
+
+// console.log('milestones',milestones)
+
+    const handleSelectChange = (value:string)=>{
+    console.log('value',value)
+    
+    // setLocalTask((prev)=>({...prev,[name]:value}))
+    setTicketDetails((prev) => {
+    if (!prev) return prev; 
+
+    return {
+      ...prev,
+      milestone_id: value,
+    };
+  });
+     
+      
+  }
 
   const handleDescriptionUpdate = async () => {
     console.log(ticketDetails);
@@ -1279,14 +1299,72 @@ const OpenTicket = () => {
                         None
                       </span> */}
 
-                       <SelectSearch
+                       {/* <SelectSearch
                           SelectSearchData={milestones.map(t=>t.summary)}
                           title={"Select Milestone"}
                           size={"full"}
-                          value={""}
-                          onChange={()=>{}}
+                          value={ticketDetails.milestone_id}
+                          onChange = {handleSelectChange}
                           required={true}
-                        />
+                        /> */}
+
+
+<Popover open={mileOpen} onOpenChange={setMileOpen}>
+  <PopoverTrigger asChild>
+    <Button
+      variant="outline"
+      role="combobox"
+      aria-expanded={mileOpen}
+      className="justify-between text-xs capitalize"
+    >
+      {ticketDetails.milestone_id
+        ? milestones.find((m) => String(m.id) === ticketDetails.milestone_id)?.summary
+        : "None"}
+      <ChevronsUpDown className="opacity-50" />
+    </Button>
+  </PopoverTrigger>
+
+  <PopoverContent className="p-0">
+    <Command className="text-xs">
+      <CommandInput placeholder="Search Here..." className="h-9 text-xs" />
+      <CommandList>
+        <CommandEmpty>Not found.</CommandEmpty>
+        <CommandGroup>
+          {milestones.map((item) => (
+            <CommandItem
+              key={item.id}
+              value={String(item.id)}   
+              className="text-xs capitalize"
+              onSelect={(currentValue) => {
+                console.log('curr',currentValue)
+setTicketDetails((prev) => {
+    if (!prev) return prev; 
+
+    return {
+      ...prev,
+      milestone_id: currentValue,
+    };
+  });  
+  handleEnter(ticketDetails,'milestone_id',currentValue)
+                setMileOpen(false);
+              }}
+            >
+              {item.summary}
+              <Check
+                className={cn(
+                  "ml-auto",
+                  ticketDetails.milestone_id === String(item.id) ? "opacity-100" : "opacity-0"
+                )}
+              />
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  </PopoverContent>
+</Popover>
+
+
                     </div>
 
                     <div className="grid grid-cols-2">
