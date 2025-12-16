@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import TicketsHead from "./ticketsHeader/TicketsHead";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import DisplayTickets from "./DisplayTickets";
 import {
@@ -27,6 +27,7 @@ import type {
 } from "./ticketInterfaces/TicketInterfaces";
 import OpenTicket from "./openTicket/OpenTicket";
 import { BoardWorkflowAPI } from "@/UserProfile/boardWorkflowAPI/BoardWorkflowAPI";
+import { set } from "date-fns";
 
 export interface ColumnsType {
   id: string;
@@ -41,6 +42,7 @@ const TicketsDashboard = () => {
     "kanban"
   );
   const [usersData, setUsersData] = useState<UsersDataType[]>([]);
+  const [draggedTicket, setDraggedTicket] = useState<TicketDetails | null>(null);
 
   const mountRef = useRef<boolean>(false);
   const { UpdateTicketStatus, fetchAllTickets, UpdateTicketHistory } =
@@ -65,7 +67,6 @@ const TicketsDashboard = () => {
     console.log("usersres", usersRes);
     if (usersRes.data) {
       setUsersData(usersRes.data);
-
     }
   };
   useEffect(() => {
@@ -75,15 +76,12 @@ const TicketsDashboard = () => {
     const fetchingTickets = async () => {
       const response = await fetchAllTickets();
       if (response?.length == 0) setNoTkts(true);
-      
 
       setAllTickets(response);
     };
     fetchingTickets();
-    GetUsersData()
+    GetUsersData();
   }, []);
-
-  
 
   useEffect(() => {
     const handler = async () => {
@@ -99,26 +97,42 @@ const TicketsDashboard = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 0.1, // only start drag if mouse moves 5px
+        distance: 8, // only start drag if mouse moves 5px
       },
     })
   );
-  console.log('alltkts',allTickets)
+  console.log("alltkts", allTickets);
 
-  const kanbanTkts = allTickets.filter((t:TicketDetails)=>t.type !== "milestone")
+  const kanbanTkts = useMemo(
+    () => allTickets.filter((t: TicketDetails) => t.type !== "milestone"),
+    [allTickets]
+  );
 
   const views = {
-    table: <div className="w-full sm:min-h-full max-h-[455px] overflow-y-auto"> <DisplayOrderedTickets allTickets={kanbanTkts} usersData = {usersData} /></div>,
-    gantt: <div className="w-full sm:min-h-full max-h-[455px] overflow-y-auto"><GanttView allTickets={allTickets} setAllTickets={setAllTickets}  /></div>,
+    table: (
+      <div className="w-full sm:min-h-full max-h-[455px] overflow-y-auto">
+        {" "}
+        <DisplayOrderedTickets allTickets={kanbanTkts} usersData={usersData} />
+      </div>
+    ),
+    gantt: (
+      <div className="w-full sm:min-h-full max-h-[455px] overflow-y-auto">
+        <GanttView allTickets={allTickets} setAllTickets={setAllTickets} />
+      </div>
+    ),
     kanban: (
-     < div className="flex-1 rounded-xl  w-full flex gap-4 overflow-x-auto">
-
-      <DndContext
-        sensors={sensors}
-        onDragEnd={handleDragEnd}
-        onDragStart={(event) => setActiveId(String(event.active.id))}
-      >
-        {Columns.map((column, idx) => {
+      <div className="flex-1 rounded-xl  w-full flex gap-4 overflow-x-auto">
+        <DndContext
+          sensors={sensors}
+          onDragEnd={handleDragEnd}
+          onDragStart={(event) => {
+            const id = String(event.active.id);
+            setActiveId(id);
+            const ticket = kanbanTkts.find((t) => String(t.id) === id);
+            setDraggedTicket(ticket || null);
+          }}
+        >
+          {/* {Columns.map((column, idx) => {
           const columnTickets = kanbanTkts.filter(
             (ticket: TicketDetails) => ticket.ticket_state === column
           );
@@ -132,20 +146,51 @@ const TicketsDashboard = () => {
               usersData = {usersData}
             />
           );
-        })}
-        <DragOverlay dropAnimation={null}>
-          {activeId
-            ? kanbanTkts.find((t) => String(t.id) === String(activeId)) && (
-                <ShowSpecifiedTickets
-                  item={
-                    kanbanTkts.find((t) => String(t.id) === String(activeId))!
-                  }
-                  allTickets={kanbanTkts}
-                />
-              )
-            : null}
-        </DragOverlay>
-      </DndContext></div>
+        })} */}
+
+          {Columns.map((column, idx) => {
+            const columnTickets = useMemo(
+              () =>
+                kanbanTkts.filter(
+                  (ticket: TicketDetails) => ticket.ticket_state === column
+                ).sort((a,b)=>new Date(b.created_at).getTime()- new Date(a.created_at).getTime()),
+              [kanbanTkts, column]
+            );
+            return (
+              <DisplayTickets
+                key={column}
+                column={column}
+                activeId={activeId}
+                tickets={columnTickets}
+                allTickets={kanbanTkts}
+                usersData={usersData}
+              />
+            );
+          })}
+          {/* <DragOverlay dropAnimation={null}>
+            {activeId
+              ? kanbanTkts.find((t) => String(t.id) === String(activeId)) && (
+                  <ShowSpecifiedTickets
+                    item={
+                      kanbanTkts.find((t) => String(t.id) === String(activeId))!
+                    }
+                    allTickets={kanbanTkts}
+                  />
+                )
+              : null}
+          </DragOverlay> */}
+
+          <DragOverlay dropAnimation={null}>
+            {activeId && draggedTicket ? (
+              <ShowSpecifiedTickets
+                item={draggedTicket}
+                allTickets={[]} 
+                usersData={usersData}
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
     ),
   };
 
@@ -171,6 +216,7 @@ const TicketsDashboard = () => {
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
+    console.log('active',active,'over',over)
     if (!over) return;
 
     const oldTicket = allTickets.find(
@@ -182,7 +228,14 @@ const TicketsDashboard = () => {
 
     if (oldTicket.ticket_state === newState) {
       setActiveId(null);
+      setDraggedTicket(null);
       return;
+    }
+    if(oldTicket.ticket_state === 'Cancelled' && newState !== 'Re Open'){
+      setActiveId(null)
+      setDraggedTicket(null);
+      toast.warning("Cancelled ticket will drag to Re Open State only!")
+      return
     }
 
     // Update UI immediately
@@ -196,9 +249,11 @@ const TicketsDashboard = () => {
 
     // setTimeout(() => setActiveId(null), 0);
     setActiveId(null);
+    setDraggedTicket(null);
 
     // update object
     const updatedTicket = {
+      ...oldTicket,
       update_id: Number(oldTicket.id),
       ticket_status: oldTicket.ticket_status,
       ticket_state: newState,
@@ -211,6 +266,7 @@ const TicketsDashboard = () => {
       due_date: oldTicket.due_date,
       assignee_id: oldTicket.assignee_id,
       reporter_id: oldTicket.reporter_id,
+      
     };
 
     const updatedTicketHistoryData = {
@@ -263,11 +319,7 @@ const TicketsDashboard = () => {
           )}
         </div>
       ) : (
-        <div
-          className={cn(
-            "flex-1 rounded-xl  w-full flex gap-4 text-xs "
-          )}
-        >
+        <div className={cn("flex-1 rounded-xl  w-full flex gap-4 text-xs ")}>
           {views[viewMode]}
 
           {/* {gridCols ? (

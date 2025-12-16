@@ -46,6 +46,7 @@ import OpenTicket from "./openTicket/OpenTicket";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BoardWorkflowAPI } from "@/UserProfile/boardWorkflowAPI/BoardWorkflowAPI";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 
 interface SpecifiedTicketsProps {
   item: TicketDetails;
@@ -62,6 +63,7 @@ const ShowSpecifiedTickets = ({
   const [parentTicket, setParentTicket] = useState<TicketDetails>();
   const [childTickets, setChildTicket] = useState<TicketDetails[]>([]);
   const [assignName, setAssigneeName] = useState<string>("");
+  const [draggedTicket, setDraggedTicket] = useState<TicketDetails | null>(null);
 
   const navigate = useNavigate();
 
@@ -308,6 +310,19 @@ const ShowSpecifiedTickets = ({
           <CardContent className="px-1 ">
             <div className=" w-full flex items-center text-sm text-gray-900 dark:text-white">
               <div>
+                <Select
+                //  onValueChange={(val) => {
+                //               const user = usersData?.find(
+                //                 (user) => String(user.id) === String(val)
+                //               );
+                //               setAssigneeDetails(
+                //                 `${user?.first_name} ${user?.last_name}`
+                //               );
+                //               handleEnter(ticketDetails, "assignee_id", val);
+                //               console.log("assgnee val", val);
+                //             }}
+                             >
+                 <SelectTrigger className="p-0 text-xs border-0 [&>svg]:hidden cursor-pointer">
                 <Avatar>
                   <AvatarFallback>
                     {item.assignee_id ? (
@@ -322,6 +337,24 @@ const ShowSpecifiedTickets = ({
                     )}
                   </AvatarFallback>
                 </Avatar>
+
+
+                                            
+                                            </SelectTrigger>
+                
+                                            <SelectContent  side="left"
+                                                  align="center"
+                                            className="w-[180px]">
+                                              {usersData?.map((user) => (
+                                                <SelectItem
+                                                  key={user.id}
+                                                  value={String(user.id)}
+                                                >
+                                                  {user.first_name} {user.last_name}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
               </div>
               <span
                 className=" cursor-pointer  flex flex-col"

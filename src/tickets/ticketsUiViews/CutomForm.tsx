@@ -29,7 +29,7 @@ export interface FormEvent {
 
 export interface FormProps {
   task: ITask;
-  taskTypes: TaskTypeOption[];
+  taskTypes: string[];
   taskState : string[]
   onAction: (event: FormEvent) => void;
 }
@@ -138,11 +138,17 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
             <SelectValue placeholder="Select task type" />
           </SelectTrigger>
           <SelectContent>
-            {taskTypes.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                {t.label}
+            {taskTypes.map((t,idx) =>{
+              // if(typeof localTask.id === 'number' && t === 'milestone' ){
+              //     return 
+                  
+              // } 
+              return (
+              
+              <SelectItem key={idx} value={t} disabled = {typeof localTask.id === 'number' && t === 'milestone'}>
+                {t}
               </SelectItem>
-            ))}
+            )})}
           </SelectContent>
         </Select>
       </div>
