@@ -128,8 +128,44 @@ const TicketHistoryFormat = ({
       break;
 
     case "Ticket":
-      if (tdata.old_value) {
-        return <div className="w-full">{tdata.new_value}</div>;
+      if (!tdata.old_value) {
+        return <div className="flex justify-between  gap-2 w-full p-1 ">
+            <div className="flex  w-full gap-2 items-center a">
+              <div className="flex w-fit gap-3">
+                <div className="w-fit">
+                  <Avatar className="">
+                    {/* <AvatarImage src="https://github.com/shadcn.png" /> */}
+                    <AvatarFallback className="uppercase font-bold bg-blue-950 text-md text-white  ">
+                      {tdata.changed_by[0] || "u"}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+
+                <div className="flex gap-3 flex-col items-center ">
+                  <div className=" w-full">
+                    <strong className="capitalize">
+                      {tdata.changed_by || "user"}
+                    </strong>{" "}
+                     <strong>{tdata.new_value}</strong>
+                  </div>
+
+                  {/* <div className="w-full flex gap-3 items-center">
+                    <span className=" border border-green-200 px-2 py-1 text-gray-950 font-bold rounded">
+                      {tdata.old_value}
+                    </span>
+                    <FontAwesomeIcon icon={faRightLong} />
+                    <span className=" border border-blue-200 px-1.5 py-1 text-blue-950 font-bold rounded">
+                      {tdata.new_value}
+                    </span>
+                  </div> */}
+                </div>
+              </div>
+            </div>
+
+            <div className="w-[50%] flex justify-end ">
+              {formatTimeAgo(tdata.updated_at)}
+            </div>
+          </div>;
       }
       break;
 

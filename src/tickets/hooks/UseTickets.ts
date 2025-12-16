@@ -59,13 +59,13 @@ interface CreateTicketDataProps {
 }
 interface CreateTicketCommentType {
   ticket_id: number;
-  commented_by: number;
+  user_id: number;
   comment_text: string;
-  attachment_path: string;
+  parent_id: number;
 }
 interface EditTicketCommentType {
   comment_id: number,
-  commented_by: number,
+  user_id: number,
   comment_text: string,
   attachment_path:string ,
   edited: boolean
@@ -339,7 +339,7 @@ export const UseTickets = () => {
   const GetTicketComments = useCallback(async (data: { ticket_id: string }) => {
     
     try {
-      const res = await axios.post("/api/ticket-comment/get-comments", data);
+      const res = await axios.get("/api/ticket-comments");
       console.log(res);
       return res.data;
     } catch (err) {
@@ -352,7 +352,7 @@ export const UseTickets = () => {
       
       try {
         const res = await axios.post(
-          "/api/ticket-comment/create-comment",
+          "/api/ticket-comments/create-comment",
           data
         );
         // console.log('res',res)
@@ -366,7 +366,7 @@ export const UseTickets = () => {
 
   const EditTicketComment = useCallback(async(data:EditTicketCommentType)=>{
     try{
-      const res = await axios.post("/api/ticket-comment/update-comment",data)
+      const res = await axios.post("/api/ticket-comments/update-comment",data)
       console.log(res)
       return res.data
     }
@@ -379,7 +379,7 @@ export const UseTickets = () => {
     async (data: { comment_id: string }) => {
       try {
         const res = await axios.post(
-          "/api/ticket-comment/delete-comment",
+          "/api/ticket-comments/delete-comment",
           data
         );
         console.log("res", res);

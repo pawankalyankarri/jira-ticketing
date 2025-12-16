@@ -195,7 +195,7 @@ const TicketsHead = ({ setTickets, setViewMode }: TicketHeadProps) => {
         <span className="relative flex justify-center items-center ">
           <FontAwesomeIcon icon={faSearch} className="absolute left-2" />
           <Input
-            className="pl-8 text-xs w-[100px]"
+            className="pl-8 text-xs w-[150px]"
             value={ticketId}
             onChange={(e) => ticketIdSearchChange(e)}
           />
@@ -276,13 +276,13 @@ const TicketsHead = ({ setTickets, setViewMode }: TicketHeadProps) => {
             color="gray"
           />
         </span>
-        <Button
+        {/* <Button
           className="p-0 bg-blue-500 hover:bg-blue-800 cursor-pointer"
           onClick={() => navigate("/tickets/createTicket")}
         >
           <FontAwesomeIcon icon={faPlus} className="text-xs" />
           Create
-        </Button>
+        </Button> */}
       </div>
     </div>
   );

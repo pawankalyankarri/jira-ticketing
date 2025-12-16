@@ -20,8 +20,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
+import { UseTickets } from "@/tickets/hooks/UseTickets";
 import { faCalendar, faX } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -37,7 +37,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 export function CreateMilestone() {
   const [open, setOpen] = useState<boolean>(true);
@@ -51,23 +51,46 @@ export function CreateMilestone() {
   const [pointing, setPointing] = useState<boolean>(false);
 
   const [milestoneData, setMilestoneData] = useState({
-    milestone_name: "",
-    // milestone_description: "",
+    summary: "",
+    description: "",
     start_date: "",
-    end_date: "",
+    due_date: "",
+    project_id: "",
+    board_id: "",
+    workflow_id: "",
+    status_id: "",
+    ticket_status: "Open",
+    ticket_state: "ToDo",
+    ticket_severity: "Medium",
+
+    file_attachment: [""],
+    comment: "",
+
+    type: "milestone",
+    progress: 0,
+    assignee_id: "",
+    reporter_id: "",
+    parent_ticket_id: "",
   });
+
+  const {CreateTicket} = UseTickets()
+  const navigate = useNavigate()
 
   const editor = useEditor({
     extensions: [StarterKit, Underline],
     content: "",
   });
 
-  function handleMilestoneSubmit(e: React.FormEvent) {
+  async function handleMilestoneSubmit(e: React.FormEvent) {
     e.preventDefault();
     let descText = editor.getHTML();
-    const data = { ...milestoneData, milestone_description: descText };
-
-    console.log(data);
+    const data = { ...milestoneData, description: descText ?? "" };
+    const res = await CreateTicket({ data: data, files: null });
+    console.log("ticket created", res);
+    if(res?.response.status){
+      navigate('/')
+    }
+    
   }
 
   return (
@@ -98,11 +121,11 @@ export function CreateMilestone() {
                 name="name"
                 className="w-full"
                 required
-                value={milestoneData.milestone_name}
+                value={milestoneData.summary}
                 onChange={(e) =>
                   setMilestoneData((prev) => ({
                     ...prev,
-                    milestone_name: e.target.value,
+                    summary: e.target.value,
                   }))
                 }
               />
@@ -209,10 +232,7 @@ export function CreateMilestone() {
                   className={`p-2 rounded cursor-pointer ${
                     editor.isActive("italic") ? "bg-gray-100 text-black" : ""
                   }`}
-                  onClick={() => 
-                    editor?.chain().focus().toggleItalic().run()
-                   
-                  }
+                  onClick={() => editor?.chain().focus().toggleItalic().run()}
                 >
                   <Italic className="h-4 w-4" />
                 </ToggleGroupItem>
@@ -223,9 +243,8 @@ export function CreateMilestone() {
                   className={`p-2 rounded cursor-pointer ${
                     editor.isActive("underline") ? "bg-gray-100 text-black" : ""
                   }`}
-                  onClick={() => 
+                  onClick={() =>
                     editor?.chain().focus().toggleUnderline().run()
-                   
                   }
                 >
                   <UnderlineTag className="h-4 w-4" />
@@ -263,13 +282,10 @@ export function CreateMilestone() {
 
                 <ToggleGroupItem
                   value="strikeThrough"
-                  
                   className={`p-2 rounded cursor-pointer ${
-                    editor?.isActive("strike")
-                      ? "bg-gray-100 text-black"
-                      : ""
+                    editor?.isActive("strike") ? "bg-gray-100 text-black" : ""
                   }`}
-                  onClick={()=>editor?.chain().focus().toggleStrike().run()}
+                  onClick={() => editor?.chain().focus().toggleStrike().run()}
                 >
                   <Strikethrough className="h-4 w-4" />
                 </ToggleGroupItem>
@@ -347,8 +363,8 @@ export function CreateMilestone() {
                       id="edate"
                       className=" justify-between font-normal w-full cursor-pointer"
                     >
-                      {milestoneData.end_date
-                        ? new Date(milestoneData.end_date).toLocaleDateString()
+                      {milestoneData.due_date
+                        ? new Date(milestoneData.due_date).toLocaleDateString()
                         : "Select date"}
                       <div className="flex">
                         <CalendarIcon />
@@ -363,8 +379,8 @@ export function CreateMilestone() {
                     <Calendar
                       mode="single"
                       selected={
-                        milestoneData.end_date
-                          ? new Date(milestoneData.end_date)
+                        milestoneData.due_date
+                          ? new Date(milestoneData.due_date)
                           : undefined
                       }
                       captionLayout="dropdown"
@@ -372,7 +388,7 @@ export function CreateMilestone() {
                         if (!date) return;
                         setMilestoneData((prev) => ({
                           ...prev,
-                          end_date: date.toISOString(),
+                          due_date: date.toISOString(),
                         }));
                         setedOpen(false);
                       }}

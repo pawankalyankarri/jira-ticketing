@@ -178,24 +178,25 @@ const DisplayTicket = ({ column, tickets, activeId,allTickets,usersData }: Colum
           .filter((item) => String(item.id) !== String(activeId)) // hide the card being dragged
           .map((item: TicketDetails) => {
             return (
-              <motion.div
-                key={item.id}
-                layout // this enables smooth position transition
-                initial={{ opacity: 1, scale: 1 }}
-                animate={{ opacity: 1, scale: 1 }}
-                // exit={{ opacity: 0 }}
-                transition={{
-                  layout: { type: "spring", stiffness: 300, damping: 25 },
-                  // default: { duration: 0.2 },
-                }}
-              >
+              // <motion.div
+              //   key={item.id}
+              //   //layout // this enables smooth position transition
+              //   initial={{ opacity: 1, scale: 1 }}
+              //   animate={{ opacity: 1, scale: 1 }}
+              //   // exit={{ opacity: 0 }}
+              //   transition={{
+              //     layout: { type: "spring", stiffness: 300, damping: 25 },
+              //     // default: { duration: 0.2 },
+              //   }}
+              // >
                 <ShowSpecifiedTickets
+                key={item.id}
                   item={item}
                   allTickets={allTickets}
                   usersData = {usersData}
                   // isDragging={activeId === String(item.id)}
                 />
-              </motion.div>
+              // </motion.div>
             );
           })}
       </div>

@@ -18,7 +18,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { UseTickets, type TicketType } from "../hooks/UseTickets";
 import { Textarea } from "@/components/ui/textarea";
 import TextareaAutosize from "react-textarea-autosize";
-import { motion } from "motion/react";
+import { motion, progress } from "motion/react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   ArrowDown,
@@ -37,6 +37,7 @@ import {
   Smile,
   Strikethrough,
   Underline as ULine,
+  UserRoundSearch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -110,6 +111,7 @@ import {
 import TicketHistoryFormat from "./TicketHistoryFormat";
 import { toast } from "sonner";
 import AddCollaborators from "./AddCollaborators";
+import { Slider } from "@/components/ui/slider";
 
 interface openTicketPropsType {
   openedTicket: TicketDetails;
@@ -125,7 +127,7 @@ const OpenTicket = () => {
   const [createdDateStr, setCreatedDateStr] = useState<string>("");
   const [createdTimeStr, setCreatedTimeStr] = useState<string>("");
   const [open, setOpen] = useState<boolean>(true);
-  const [mileOpen,setMileOpen] = useState<boolean>(false)
+  const [mileOpen, setMileOpen] = useState<boolean>(false);
   const [collabsOpen, setCollabsOpen] = useState<boolean>(true);
   const [collaborators, setCollaborators] = useState<
     TicketCollaboratorsDataType[]
@@ -141,6 +143,7 @@ const OpenTicket = () => {
   const [attachDialog, setAttachDialog] = useState<boolean>(false);
   const [collabDialog, setCollabDialog] = useState<boolean>(false);
   const [updateSummary, setUpdateSummary] = useState<string>("");
+  const summaryRef = useRef<HTMLTextAreaElement | null>(null);
 
   const navigate = useNavigate();
   const {
@@ -182,7 +185,7 @@ const OpenTicket = () => {
         if (response) {
           const subtkts = res.filter(
             (t: TicketDetails) =>
-              String(t.parent_ticket_id) === String(params.id)
+              String(t.parent_ticket_id) === String(params.id) && t.type !== 'milestone'
           );
 
           const parent_tkt = res.find(
@@ -201,6 +204,7 @@ const OpenTicket = () => {
           setParentTicket(parent_tkt);
           setSubTickets(subtkts);
           setTicketDetails(response);
+          setUpdateSummary(response.summary);
           setMilestones(milestoneTickets);
           const tktHistory = await GetTicketHistory({
             ticket_id: String(response.id),
@@ -228,6 +232,7 @@ const OpenTicket = () => {
         }
       };
       fetch();
+      // summaryRef.current?.blur();
     }
   }, [params.id]);
   console.log("ticketdetails", ticketDetails);
@@ -342,23 +347,21 @@ const OpenTicket = () => {
     console.log("collabs after select", collaborators);
   };
 
-// console.log('milestones',milestones)
+  // console.log('milestones',milestones)
 
-    const handleSelectChange = (value:string)=>{
-    console.log('value',value)
-    
+  const handleSelectChange = (value: string) => {
+    console.log("value", value);
+
     // setLocalTask((prev)=>({...prev,[name]:value}))
     setTicketDetails((prev) => {
-    if (!prev) return prev; 
+      if (!prev) return prev;
 
-    return {
-      ...prev,
-      milestone_id: value,
-    };
-  });
-     
-      
-  }
+      return {
+        ...prev,
+        milestone_id: value,
+      };
+    });
+  };
 
   const handleDescriptionUpdate = async () => {
     console.log(ticketDetails);
@@ -395,7 +398,7 @@ const OpenTicket = () => {
   const handleEnter = async (
     tktDetails: TicketDetails,
     name?: string,
-    value?: string
+    value?: string | number
   ) => {
     if (!tktDetails) return;
     const updatedData: TicketUpdateFormDataType & { [key: string]: any } = {
@@ -508,11 +511,18 @@ const OpenTicket = () => {
       onOpenChange={(val) => {
         setOpen(val);
         console.log("value", val);
-        if (!val) navigate("/tickets");
+        if (!val) {
+          window.dispatchEvent(new Event("ticketsUpdated"));
+          navigate("/tickets");
+
+        }
       }}
     >
       {ticketDetails && (
-        <DialogContent className="w-full! sm:w-[90%]! max-w-none! h-[90%]! border-0! shadow-none! focus-visible:outline-none! focus-visible:ring-0 gap-2 p-0 ">
+        <DialogContent
+          className="w-full! sm:w-[90%]! max-w-none! h-[90%]! border-0! shadow-none! focus-visible:outline-none! focus-visible:ring-0 gap-2 p-0 "
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader className=" gap-0 sticky bg-gray-200 max-w-full py-3 h-fit rounded-md">
             <DialogTitle className="w-full px-2 flex justify-between items-center  ">
               <div className="flex gap-4 items-center">
@@ -652,6 +662,7 @@ const OpenTicket = () => {
                   className="float-right p-1.5 bg-gray-300 rounded"
                   onClick={() => {
                     setOpen(false);
+                    window.dispatchEvent(new Event("ticketsUpdated"));
                     navigate("/tickets");
                   }}
                 >
@@ -752,32 +763,86 @@ const OpenTicket = () => {
                     </>
                     <div className="font-bold text-blue-950 text-lg">
                       {/* <span className="text-lg font-bold">Summary</span> */}
-                      <Textarea
+                      {/* <Textarea
                         value={ticketDetails.summary}
                         onChange={(e) => {
                           setTicketDetails((prev) => ({
                             ...prev!,
                             summary: e.target.value,
                           }));
-                          setUpdateSummary(e.target.value);
+                          // setUpdateSummary(e.target.value)
+                        }}
+                        // onFocus={() => {
+                        //   const el = summaryRef.current;
+                        //   if (el) {
+                        //     el.selectionStart = el.selectionEnd = el.value.length; 
+                        //   }
+                        // }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            // if (
+                            //   updateSummary.trim() !==
+                            //   ticketDetails.summary.trim()
+                            // ) {
+                              handleEnter(
+                                ticketDetails,
+                                "summary",
+                                ticketDetails.summary.trim()
+                              );
+                              
+                              setUpdateSummary(ticketDetails.summary.trim());
+                              console.log(
+                                "updated",
+                                updateSummary,
+                                ticketDetails.summary
+                              );
+                            }
+                          }
+                        // }
+                        }
+                        spellCheck={false}
+                        className=" resize-none min-h-10 border-0 outline-0 focus:outline-0 focus:border-0 font-bold text-blue-950 text-lg! px-0  focus:ring-0 shadow-none"
+                      /> */}
+
+                      <Textarea
+                        ref={summaryRef}
+                        value={ticketDetails.summary}
+                        onChange={(e) => {
+                          setTicketDetails((prev) => ({
+                            ...prev!,
+                            summary: e.target.value,
+                          }));
+                        }}
+                        
+                        onFocus={(e) => {
+                          const el = e.currentTarget;
+                          // Move cursor to end ONLY when focused
+                          el.setSelectionRange(
+                            el.value.length,
+                            el.value.length
+                          );
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
+
+                            const newSummary = ticketDetails.summary.trim();
+
+                            // Call API only if text changed
                             if (
-                              updateSummary.trim() !== ticketDetails.summary
+                              newSummary &&
+                              newSummary !== updateSummary.trim()
                             ) {
-                              handleEnter(
-                                ticketDetails,
-                                "summary",
-                                updateSummary
-                              );
+                              handleEnter(ticketDetails, "summary", newSummary);
+                              setUpdateSummary(newSummary);
                             }
                           }
                         }}
                         spellCheck={false}
-                        className=" resize-none min-h-10 border-0 outline-0 focus:outline-0 focus:border-0 font-bold text-blue-950 text-lg! px-0  focus:ring-0 shadow-none"
+                        className="resize-none min-h-10 border-0 outline-0 focus:outline-0 font-bold text-blue-950 text-lg! px-0 focus:ring-0 shadow-none"
                       />
+
                       {/* <p className="font-bold text-blue-950 text-lg">
                         {ticketDetails.summary}
                       </p> */}
@@ -894,6 +959,7 @@ const OpenTicket = () => {
                         </div>
                         <div className="">
                           <EditorContent
+                          
                             editor={editor}
                             // onFocus={() => setIsFocused(true)}
                             // ref={textareaRef}
@@ -901,9 +967,27 @@ const OpenTicket = () => {
                               if (e.key === "Enter")
                                 console.log("enter", editor.getHTML());
                             }}
-                            className={cn(`tiptap-editor
-                                          border-0 rounded-md cursor-pointer outline-none focus:outline-none focus:ring-0
-                                          [&_p]:min-h-30 [&_p]:rounded-md [&_p]:p-2`)}
+                            className={cn(`
+                            tiptap-editor
+    min-h-30
+    p-2
+    cursor-text
+
+    border-0 outline-none focus:outline-none focus:ring-0
+    ring-0 focus:ring-0 focus-visible:ring-0
+
+    [&_.ProseMirror]:outline-none
+    [&_.ProseMirror]:border-0
+    [&_.ProseMirror]:ring-0
+    [&_.ProseMirror]:shadow-none
+
+    [&_p]:outline-none
+    [&_p]:border-0
+    [&_p]:ring-0
+    [&_p]:shadow-none
+    [&_p]:m-0
+    [&_p]:p-0
+    `)}
                           />
                         </div>
                       </div>
@@ -1002,7 +1086,7 @@ const OpenTicket = () => {
                 <Card className="pt-0">
                   <div className="flex justify-between text-sm bg-gray-200 p-3 text-blue-950 rounded-t-xl">
                     <p className="font-bold">Details</p>
-                    <p className="underline font-bold">Add To Watchlist</p>
+                    <p className="underline font-bold cursor-pointer">Add To Watchlist</p>
                   </div>
                   <CardContent className="grid gap-4 px-2">
                     <div className="grid grid-cols-2">
@@ -1030,21 +1114,35 @@ const OpenTicket = () => {
                       <Label className="flex items-center">
                         Allocated Hours
                       </Label>
-                      {/* <span className="border border-gray-500 p-1 rounded">None</span> */}
+                      <span className="border border-gray-500 p-1 rounded">
+                        None
+                      </span>
 
-                      <Input
+                      {/* <Input
                         type="time"
                         step={1}
                         className="bg-background cursor-pointer border-black rounded appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                      />
+                      /> */}
                     </div>
 
                     <div className="grid grid-cols-2">
                       <Label>Time Tracking</Label>
                       <span className="grid">
-                        <Progress className="w-full" />
+                        <Slider
+                          className="w-full"
+                          value={[ticketDetails.progress]}
+                          onValueChange={([val]) =>
+                            setTicketDetails((prev) => ({
+                              ...prev!,
+                              progress: val,
+                            }))
+                          }
+                          onValueCommit={([val]) =>
+                            handleEnter(ticketDetails, "progress", val)
+                          }
+                        />
                         <span className="flex justify-end text-xs">
-                          0 % Completed
+                          {ticketDetails.progress}% Completed
                         </span>
                       </span>
                     </div>
@@ -1097,7 +1195,7 @@ const OpenTicket = () => {
                       </div>
                     </div> */}
 
-                    <div className="grid grid-cols-2">
+                    <div className="grid grid-cols-2 ">
                       <Label className="capitalize">Assignee</Label>
 
                       <div className="flex items-center gap-1">
@@ -1113,7 +1211,7 @@ const OpenTicket = () => {
                           </Avatar>
                         ) : (
                           <span
-                            className="cursor-pointer text-xs underline text-blue-900"
+                            className=" w-full cursor-pointer text-xs underline text-blue-900"
                             onClick={() => setAssigneeDetails("admin")}
                           >
                             Assign to me
@@ -1127,7 +1225,8 @@ const OpenTicket = () => {
 
                         {/* Select only when no assignee */}
                         {!ticketDetails.assignee_id && !assigneedetails && (
-                          <Select
+                          <div className="w-full">
+                            <Select
                             onValueChange={(val) => {
                               const user = usersData.find(
                                 (user) => String(user.id) === String(val)
@@ -1138,12 +1237,20 @@ const OpenTicket = () => {
                               handleEnter(ticketDetails, "assignee_id", val);
                               console.log("assgnee val", val);
                             }}
+                            
+                    
                           >
-                            <SelectTrigger className="w-full text-xs">
-                              <SelectValue placeholder="Select Assignee" />
+                            <SelectTrigger className=" text-xs border-0 [&>svg]:hidden cursor-pointer">
+                              <Avatar className="">
+                                <AvatarFallback className="uppercase font-bold bg-gray-500 text-white text-[10px]">
+                                  <UserRoundSearch />
+                                </AvatarFallback>
+                              </Avatar>
                             </SelectTrigger>
 
-                            <SelectContent>
+                            <SelectContent  side="left"
+                                  align="center"
+                            className="w-[180px]">
                               {usersData.map((user) => (
                                 <SelectItem
                                   key={user.id}
@@ -1154,6 +1261,9 @@ const OpenTicket = () => {
                               ))}
                             </SelectContent>
                           </Select>
+                          </div>
+                    
+
                         )}
                       </div>
                     </div>
@@ -1299,72 +1409,80 @@ const OpenTicket = () => {
                         None
                       </span> */}
 
-                       {/* <SelectSearch
-                          SelectSearchData={milestones.map(t=>t.summary)}
-                          title={"Select Milestone"}
-                          size={"full"}
-                          value={ticketDetails.milestone_id}
-                          onChange = {handleSelectChange}
-                          required={true}
-                        /> */}
+                      <Popover open={mileOpen} onOpenChange={setMileOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={mileOpen}
+                            className="justify-between text-xs capitalize"
+                          >
+                            {ticketDetails.milestone_id
+                              ? milestones.find(
+                                  (m) =>
+                                    String(m.id) === ticketDetails.milestone_id
+                                )?.summary
+                              : "None"}
+                            <ChevronsUpDown className="opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
 
+                        <PopoverContent className="p-0" side="left" align="center" >
+                          <Command className="text-xs bg-white">
+                            <CommandInput
+                              placeholder="Search Here..."
+                              className="h-9 text-xs"
+                            />
+                            <CommandList className=" p-0 max-h-60 overflow-y-auto"
+                          onWheel={(e) => {
+                            const el = e.currentTarget as HTMLElement;
+                            if (el.scrollHeight > el.clientHeight) {
+                              el.scrollTop += (e as WheelEvent).deltaY;
+                              // e.preventDefault();
+                            }
+                          }} >
+                              <CommandEmpty>Not found.</CommandEmpty>
+                              <CommandGroup >
+                                {milestones.map((item) => (
+                                  <CommandItem
+                                    key={item.id}
+                                    value={String(item.id)}
+                                    className="text-xs capitalize"
+                                    onSelect={(currentValue) => {
+                                      console.log("curr", currentValue);
+                                      setTicketDetails((prev) => {
+                                        if (!prev) return prev;
 
-<Popover open={mileOpen} onOpenChange={setMileOpen}>
-  <PopoverTrigger asChild>
-    <Button
-      variant="outline"
-      role="combobox"
-      aria-expanded={mileOpen}
-      className="justify-between text-xs capitalize"
-    >
-      {ticketDetails.milestone_id
-        ? milestones.find((m) => String(m.id) === ticketDetails.milestone_id)?.summary
-        : "None"}
-      <ChevronsUpDown className="opacity-50" />
-    </Button>
-  </PopoverTrigger>
-
-  <PopoverContent className="p-0">
-    <Command className="text-xs">
-      <CommandInput placeholder="Search Here..." className="h-9 text-xs" />
-      <CommandList>
-        <CommandEmpty>Not found.</CommandEmpty>
-        <CommandGroup>
-          {milestones.map((item) => (
-            <CommandItem
-              key={item.id}
-              value={String(item.id)}   
-              className="text-xs capitalize"
-              onSelect={(currentValue) => {
-                console.log('curr',currentValue)
-setTicketDetails((prev) => {
-    if (!prev) return prev; 
-
-    return {
-      ...prev,
-      milestone_id: currentValue,
-    };
-  });  
-  handleEnter(ticketDetails,'milestone_id',currentValue)
-                setMileOpen(false);
-              }}
-            >
-              {item.summary}
-              <Check
-                className={cn(
-                  "ml-auto",
-                  ticketDetails.milestone_id === String(item.id) ? "opacity-100" : "opacity-0"
-                )}
-              />
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </CommandList>
-    </Command>
-  </PopoverContent>
-</Popover>
-
-
+                                        return {
+                                          ...prev,
+                                          milestone_id: currentValue,
+                                        };
+                                      });
+                                      handleEnter(
+                                        ticketDetails,
+                                        "milestone_id",
+                                        currentValue
+                                      );
+                                      setMileOpen(false);
+                                    }}
+                                  >
+                                    {item.summary}
+                                    <Check
+                                      className={cn(
+                                        "ml-auto",
+                                        ticketDetails.milestone_id ===
+                                          String(item.id)
+                                          ? "opacity-100"
+                                          : "opacity-0"
+                                      )}
+                                    />
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
 
                     <div className="grid grid-cols-2">
@@ -1384,7 +1502,7 @@ setTicketDetails((prev) => {
                       <span className="flex items-center gap-2 ">
                         <Avatar>
                           <AvatarFallback className="uppercase font-bold bg-blue-950 text-md text-white ">
-                            {ticketDetails.reporter_id}
+                            {<FontAwesomeIcon icon={faUser} />}
                           </AvatarFallback>
                         </Avatar>
 
@@ -1396,7 +1514,6 @@ setTicketDetails((prev) => {
                     <div className=" w-full">
                       <Card className="flex justify-between items-center p-2 gap-1 rounded cursor-pointer  ">
                         <div className="w-full flex justify-between items-center rounded cursor-pointer">
-                          {" "}
                           <span className="uppercase font-bold text-xs">
                             sub Tasks
                           </span>

@@ -154,10 +154,10 @@ const GanttView = ({ allTickets, setAllTickets }: GanttViewPropsType) => {
 
 const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
   const mappedTasks: GanttTicket[] = [];
-  let virtualIdCounter = -1; // Start high to avoid ID conflicts
+  let virtualIdCounter = -1;
 
   tickets.forEach((ticket) => {
-    // Skip standalone milestones (they'll be added as children)
+    
     if (ticket.type === 'milestone') {
       return;
     }
@@ -177,17 +177,17 @@ const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
       ticket_severity: ticket.ticket_severity,
     });
 
-    // If this ticket has a milestone, create a UNIQUE instance for this ticket
+    // If this ticket has a milestone, create a unique instance for this ticket
     if (ticket.milestone_id) {
       const milestone = tickets.find(
         (t) => String(t.id) === String(ticket.milestone_id)
       );
 
       if (milestone) {
-        // Create a VIRTUAL milestone with a unique ID
+        // Create a virtual milestone with a unique id
         // This allows the same milestone to appear under multiple parents
         mappedTasks.push({
-          id: virtualIdCounter--, // Virtual unique ID
+          id: virtualIdCounter--, // virtual unique id negative values
           text: milestone.summary,
           start: milestone.start_date
             ? new Date(milestone.start_date)
@@ -195,7 +195,7 @@ const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
           end: milestone.due_date
             ? new Date(milestone.due_date)
             : new Date(),
-          parent: ticket.id, // This milestone is a child of THIS ticket
+          parent: ticket.id, // this milestone is a child of this ticket
           progress: milestone.progress,
           original_id : milestone.id,
           type: milestone.type ?? "milestone",
@@ -247,6 +247,57 @@ const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
     return links;
   };
 
+
+//   const generateSubtaskLinks = (tickets: GanttTicket[]): LinksType[] => {
+//   const links: LinksType[] = [];
+//   let linkCounter = 1;
+
+//   const addLinksRecursively = (parentId: number) => {
+//     // get children
+//     const children = tickets
+//       .filter((t) => t.parent === parentId)
+//       //  SORT BY DATE
+//       .sort((a, b) => {
+//         // milestones by end date
+//         if (a.type === "milestone" && b.type === "milestone") {
+//           return a.end!.getTime() - b.end!.getTime();
+//         }
+
+//         // normal tasks by start date
+//         return a.start.getTime() - b.start.getTime();
+//       });
+
+//     // link siblings in order
+//     for (let i = 0; i < children.length - 1; i++) {
+//       links.push({
+//         id: linkCounter++,
+//         source: children[i].id,
+//         target: children[i + 1].id,
+//         type: "e2s",
+//       });
+//     }
+
+//     // link parent → first child
+//     if (children.length > 0) {
+//       links.push({
+//         id: linkCounter++,
+//         source: parentId,
+//         target: children[0].id,
+//         type: "e2s",
+//       });
+//     }
+
+//     // recurse
+//     children.forEach((child) => addLinksRecursively(child.id));
+//   };
+
+//   const rootTasks = tickets.filter((t) => !t.parent || t.parent === 0);
+//   rootTasks.forEach((root) => addLinksRecursively(root.id));
+
+//   return links;
+// };
+
+
   // const GetTickets = async () => {
   //   // const validTasks = allTickets.map(mapTicketToTask);
   //   const validTasks = mapTicketsToTasks(allTickets);
@@ -281,9 +332,9 @@ useEffect(() => {
 
 
   const taskTypes = [
-    { id: "task", label: "task" },
-    { id: "milestone", label: "milestone" },
-    { id: "summary", label: "summary" },
+     "task" ,
+    "milestone" ,
+    "summary",
   ];
 
   const formAction = async (ev: {
@@ -309,8 +360,9 @@ useEffect(() => {
         console.log("data", data);
         try {
           // const res = await GetTicket(data.id);
-
-          const originalTicket = allTickets.find((t) => t.id === data.id);
+          let dataId = data.id < 0 ? data.original_id : data.id
+          const originalTicket = allTickets.find((t) => t.id === dataId );
+          console.log('original ticket',originalTicket)
           if (!originalTicket) return;
           console.log(
             "status",
@@ -318,6 +370,7 @@ useEffect(() => {
             "severity",
             data.ticket_severity
           );
+          console.log('data.date',data.start,data.end)
           const updatedTicket = {
             ...originalTicket,
             summary: data.text ?? originalTicket.summary,
@@ -330,7 +383,7 @@ useEffect(() => {
             ticket_severity: data.ticket_severity,
             progress: data.progress,
             parent_ticket_id: String(data.parent ?? 0),
-            update_id: Number(data.id),
+            update_id: data.id > 0 ?  Number(data.id) : Number(data.original_id), 
           };
           console.log("update-task", updatedTicket);
           await EditTicket(updatedTicket, [], data.id);
@@ -408,7 +461,7 @@ useEffect(() => {
               progress: 0,
               assignee_id: "",
               reporter_id: "",
-              parent_ticket_id: "",
+              parent_ticket_id:String(data.parent),
             };
             console.log('create milestone',newTicket)
           } else {
@@ -466,7 +519,7 @@ useEffect(() => {
             const updated = {...parent!,milestone_id : String(m_id), update_id: Number(m_obj.parent_ticket_id)}
             const response = await EditTicket(updated,[],m_obj.parent_ticket_id)
             console.log('response of milestone parent =====>',response)
-
+            await GetTickets()
 
 
             
@@ -584,7 +637,7 @@ useEffect(() => {
       console.log("Task updated after drag:", task);
       const data = api.getTask(task.id);
       console.log("data", data);
-      console.log('taskoroingla',task.original_id)
+      console.log('taskoroingla',task.original_id)                                  
 
       // convert dates to string for backend
       const start = task.start ? new Date(task.start).toISOString() : "";
@@ -620,7 +673,7 @@ useEffect(() => {
       );
       const response = await fetchAllTickets();
       setAllTickets(response);
-      // await GetTickets()
+      await GetTickets()
 
       // setAllGanttTickets((prev) =>
       //   prev.map((t) =>

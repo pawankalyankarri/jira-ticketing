@@ -15,6 +15,8 @@ import {
   Italic,
   List,
   ListOrdered,
+  MessageSquareReply,
+  Reply,
   Rss,
   Smile,
   Strikethrough,
@@ -31,7 +33,7 @@ import type { UsersDataType } from "../ticketInterfaces/TicketInterfaces";
 
 interface CommentsType {
   ticket_id: number;
-  commented_by: number;
+  user_id: number;
   comment_text: string;
   attachment_path: string;
   id: number;
@@ -39,6 +41,7 @@ interface CommentsType {
   updated_at: string;
   entity_id: any;
   edited: boolean;
+  parent_id: number;
 }
 
 interface ToolbarButtonProps {
@@ -54,10 +57,14 @@ interface TicketCommentsProps {
 const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<number | null>(null);
+  const [isReplyEditing, setIsReplyEditing] = useState<number | null>(null);
   const [editContent, setEditContent] = useState<string>("");
   const [comments, setComments] = useState<CommentsType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const textareaRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [replyInput, setReplyInput] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState<string>("");
+  const [replayEditContent, setReplyEditContent] = useState<string>("");
 
   const {
     GetTicketComments,
@@ -77,8 +84,13 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
   const allComments = async () => {
     const response = await GetTicketComments({ ticket_id: String(tktid) });
     console.log("comments", response);
-    if (response.status) {
-      setComments(response.data.data);
+    if (response.count > 0) {
+      const coms = response.data.filter(
+        (c: CommentsType) => String(c.ticket_id) === String(tktid)
+      );
+      setComments(coms);
+      setLoading(false);
+    } else {
       setLoading(false);
     }
   };
@@ -126,7 +138,7 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
     const seconds = Math.floor(diff / 1000);
     const minutes = Math.floor(diff / 1000 / 60);
     const hours = Math.floor(diff / 1000 / 60 / 60);
-    const days = Math.floor(diff / 1000 / 60 /60/ 24);
+    const days = Math.floor(diff / 1000 / 60 / 60 / 24);
 
     if (days > 7) {
       return date.toLocaleDateString("en-US", {
@@ -169,9 +181,9 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
     }
     const comment = {
       ticket_id: Number(tktid),
-      commented_by: 1,
+      user_id: 1,
       comment_text: html,
-      attachment_path: "",
+      parent_id: 0,
       // edited: false,
     };
     console.log(comment);
@@ -207,10 +219,17 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
 
   const handleEditComment = (id: number) => {
     const comment = comments.find((c) => c.id === id);
+    console.log("commentedit", comment);
     if (!comment) return;
     const plainText = htmlToText(comment.comment_text);
-    setEditContent(plainText);
-    setIsEditing(comment.id);
+
+    if (comment.parent_id === 0) {
+      setEditContent(plainText);
+      setIsEditing(comment.id);
+    } else {
+      setReplyEditContent(plainText);
+      setIsReplyEditing(comment.id);
+    }
   };
 
   // const handleEditComment = (id: string) => {
@@ -221,13 +240,13 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
   //   setIsEditing(comment.id);
   // };
 
-  const handleSaveEditComment = async (id: number) => {
-    if (!editContent) return;
+  const handleSaveEditComment = async (id: number, editcnt: string) => {
+    if (!editcnt) return;
 
     const editedComment = {
       comment_id: id,
-      commented_by: 1,
-      comment_text: editContent,
+      user_id: 1,
+      comment_text: editcnt,
       attachment_path: "",
       edited: true,
     };
@@ -237,6 +256,7 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
     if (res.status) {
       setLoading(true);
       setIsEditing(null), setEditContent("");
+      setReplyEditContent(""), setIsReplyEditing(null);
       await allComments();
     } else {
       toast.error(res.message);
@@ -253,6 +273,26 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
     //       : c
     //   )
     // );
+  };
+
+  const handleReplyToComment = async (cid: number) => {
+    const comment = {
+      ticket_id: Number(tktid),
+      user_id: 1,
+      comment_text: replyText,
+      parent_id: cid,
+      // edited: false,
+    };
+    setReplyText("");
+    setReplyInput(null);
+
+    const response = await CreateTicketComment(comment);
+
+    console.log("response", response);
+    if (response.status) {
+      setLoading(true);
+      await allComments();
+    }
   };
 
   const adjustTextareaHeight = (textareaRef: HTMLElement | null) => {
@@ -284,8 +324,6 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
           <div className="w-full h-full">
             {isFocused && (
               <div className="flex gap-2 mb-2 ">
-
-
                 <ToggleGroup type="single" className="flex gap-2">
                   {/* Bold */}
                   <ToggleGroupItem
@@ -387,7 +425,24 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
                   editor={editor}
                   onFocus={() => setIsFocused(true)}
                   // ref={textareaRef}
-                  className={cn(`tiptap-editor border-0 rounded-md cursor-pointer outline-none focus:outline-none focus:ring-0 [&_p]:min-h-14 [&_p]:rounded-md [&_p]:p-2 [&_p]:outline-none [&_p]:focus:outline-none [&_p]:focus:ring-0 [&_p]:border-0
+                  className={cn(`
+                    
+                    tiptap-editor
+                    cursor-text
+                    p-1
+                    border-0 rounded-md outline-none focus:outline-none focus:ring-0
+                    ring-0 focus:ring-0 focus-visible:ring-0
+                    [&_.ProseMirror]:outline-none
+                    [&_.ProseMirror]:border-0
+                    [&_.ProseMirror]:ring-0
+                    [&_.ProseMirror]:shadow-none
+                    [&_p]:outline-none
+                    [&_p]:border-0
+                    [&_p]:ring-0
+                    [&_p]:shadow-none
+                    [&_p]:m-0
+                    [&_p]:p-0
+
                   `)}
                 />
               ) : (
@@ -437,28 +492,34 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
           <div className="text-center"> No comments</div>
         ) : (
           [...comments].reverse().map((comment: CommentsType) => {
-            const user = usersData.find((u) => u.id === comment.commented_by);
-            if (!user) return;
+            const user = usersData.find((u) => u.id === comment.user_id);
+            const commentReplys = comments.filter(
+              (c: CommentsType) => c.parent_id === comment.id
+            );
+            const deleted = comment.comment_text === "Comment deleted";
+
+            if (!user || comment.parent_id > 0) return;
             // console.log('user',user)
             return (
-              <div
-                className="flex gap-3 px-2 justify-center items-center"
-                key={comment.id}
-              >
-                <div className="flex flex-col items-end">
-                  <span className="">
-                    <Clock size={16} />
-                  </span>
-                  <span className="w-8 h-8 rounded-full bg-blue-600 flex justify-center items-center text-white uppercase font-bold shrink-0 text-sm">
-                    {user.first_name.trim() === ""
-                      ? user.email[0]
-                      : `${user.first_name[0]}${user.last_name[0]}`}
-                  </span>
+              <div className="flex gap-3 px-2 justify-center " key={comment.id}>
+                
+                <div className="flex items-start">
+                  <div className="flex flex-col items-end">
+                    <span className="">
+                      <Clock size={16} />
+                    </span>
+                    <span className="w-8 h-8 rounded-full bg-blue-600 flex justify-center items-center text-white uppercase font-bold shrink-0 text-sm">
+                      {user.first_name.trim() === ""
+                        ? user.email[0]
+                        : `${user.first_name[0]}${user.last_name[0]}`}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex-1">
                   <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
-                    <div className="flex items-start justify-between mb-2">
+                    {!deleted && (<div className="flex items-start justify-between mb-2">
+                      
                       <div className="flex justify-center items-center">
                         <span className="text-gray-900 text-sm capitalize font-bold">
                           {user.first_name.trim() === ""
@@ -470,29 +531,41 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
                           <span>{comment.edited && "(edited)"}</span>
                         </span>
                       </div>
-                      <div className="flex gap-1">
-                        <span
-                          className="text-xs text-gray-500 hover:text-blue-500 px-2 py-2 cursor-pointer "
-                          onClick={() => handleEditComment(comment.id)}
-                        >
-                          Edit
-                        </span>
-                        <span
-                          className="text-xs text-gray-500 hover:text-red-500 px-2 py-2 cursor-pointer"
-                          onClick={() =>
-                            handleDeleteComment(String(comment.id))
-                          }
-                        >
-                          Delete
-                        </span>
-                      </div>
-                    </div>
+                      
+                        <div className="flex gap-1">
+                          <span
+                            className="text-xs text-gray-500 hover:text-blue-500 px-2 py-2 cursor-pointer "
+                            onClick={() => handleEditComment(comment.id)}
+                          >
+                            Edit
+                          </span>
+                          <span
+                            className="text-xs text-gray-500 hover:text-red-500 px-2 py-2 cursor-pointer"
+                            onClick={() =>
+                              handleDeleteComment(String(comment.id))
+                            }
+                          >
+                            Delete
+                          </span>
+                        </div>
+                      
+                    </div>)}
+
                     {isEditing === comment.id ? (
                       <div>
                         <textarea
                           value={editContent}
+                          ref={textareaRef}
                           onChange={(e) => setEditContent(e.target.value)}
-                          className="w-full resize-none border border-gray-300 rounded px-3 py-2 focus:border-blue-500 focus:outline-none min-h-20"
+                          onFocus={(e) => {
+                            const el = e.currentTarget;
+                            // Move cursor to end only when focused
+                            el.setSelectionRange(
+                              el.value.length,
+                              el.value.length
+                            );
+                          }}
+                          className="w-full resize-none border border-gray-300 rounded px-3 py-2 focus:border-blue-500 focus:outline-none min-h-10"
                           autoFocus
                         />
 
@@ -500,7 +573,9 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
                           <Button
                             className=""
                             variant={"outline"}
-                            onClick={() => handleSaveEditComment(comment.id)}
+                            onClick={() =>
+                              handleSaveEditComment(comment.id, editContent)
+                            }
                           >
                             Save
                           </Button>
@@ -518,12 +593,176 @@ const TicketCommnets = ({ tktid, usersData }: TicketCommentsProps) => {
                       </div>
                     ) : (
                       <div
-                        className="px-1  rounded text-bg-gray-600  whitespace-pre-wrap"
+                        className={cn("px-1  rounded text-bg-gray-600  whitespace-pre-wrap",deleted ? "cursor-no-drop": "")}
                         dangerouslySetInnerHTML={{
                           __html: comment.comment_text,
                         }}
                       />
                     )}
+                  </div>
+                  <div className="p-1">
+                    <Reply onClick={() => setReplyInput(comment.id)} />
+                    {replyInput === comment.id && (
+                      <div className="ml-20">
+                        <textarea
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          // onFocus={(e) => {
+                          //   const el = e.currentTarget;
+                          //   // Move cursor to end only when focused
+                          //   el.setSelectionRange(
+                          //     el.value.length,
+                          //     el.value.length
+                          //   );
+                          // }}
+                          className="w-full resize-none border border-gray-300 rounded px-3 py-2 focus:border-blue-500 focus:outline-none min-h-20"
+                          autoFocus
+                        />
+
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            className=""
+                            variant={"outline"}
+                            onClick={() => handleReplyToComment(comment.id)}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            className=""
+                            variant={"outline"}
+                            onClick={() => {
+                              setReplyInput(null);
+                              setReplyText("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {commentReplys.length > 0 &&
+                      commentReplys.map((comReply) => {
+                        const replyDelete = comReply.comment_text === "Comment deleted";
+                        return (
+                          <div
+                            className="flex gap-3 px-2 py-1 justify-center items-center"
+                            key={comReply.id}
+                          >
+                            <div className="flex flex-col items-end">
+                              <span className="">
+                                <Clock size={16} />
+                              </span>
+                              <span className="w-8 h-8 rounded-full bg-blue-600 flex justify-center items-center text-white uppercase font-bold shrink-0 text-sm">
+                                {user.first_name.trim() === ""
+                                  ? user.email[0]
+                                  : `${user.first_name[0]}${user.last_name[0]}`}
+                              </span>
+                            </div>
+
+                            <div className="flex-1">
+                              <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
+                                {!replyDelete && 
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex justify-center items-center">
+                                    <span className="text-gray-900 text-sm capitalize font-bold">
+                                      {user.first_name.trim() === ""
+                                        ? user.email
+                                        : `${user.first_name} ${user.last_name}`}
+                                    </span>
+                                    <span className="text-gray-500 ml-2 text-xs flex gap-1 justify-center items-center">
+                                      <span>
+                                        {formatTimestamp(comReply.updated_at)}
+                                      </span>
+                                      <span>
+                                        {comReply.edited && "(edited)"}
+                                      </span>
+                                    </span>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <span
+                                      className="text-xs text-gray-500 hover:text-blue-500 px-2 py-2 cursor-pointer "
+                                      onClick={() =>
+                                        handleEditComment(comReply.id)
+                                      }
+                                    >
+                                      Edit
+                                    </span>
+                                    <span
+                                      className="text-xs text-gray-500 hover:text-red-500 px-2 py-2 cursor-pointer"
+                                      onClick={() =>
+                                        handleDeleteComment(String(comReply.id))
+                                      }
+                                    >
+                                      Delete
+                                    </span>
+                                  </div>
+                                </div>}
+
+                                {/* <div
+                                  className="px-1  rounded text-bg-gray-600  whitespace-pre-wrap"
+                                  dangerouslySetInnerHTML={{
+                                    __html: comReply.comment_text,
+                                  }}
+                                /> */}
+
+                                {isReplyEditing === comReply.id ? (
+                                  <div>
+                                    <textarea
+                                      value={replayEditContent}
+                                      onChange={(e) =>
+                                        setReplyEditContent(e.target.value)
+                                      }
+                                      onFocus={(e) => {
+                                        const el = e.currentTarget;
+                                        // Move cursor to end only when focused
+                                        el.setSelectionRange(
+                                          el.value.length,
+                                          el.value.length
+                                        );
+                                      }}
+                                      className="w-full resize-none border border-gray-300 rounded px-3 py-2 focus:border-blue-500 focus:outline-none min-h-10"
+                                      autoFocus
+                                    />
+
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        className=""
+                                        variant={"outline"}
+                                        onClick={() =>
+                                          handleSaveEditComment(
+                                            comReply.id,
+                                            replayEditContent
+                                          )
+                                        }
+                                      >
+                                        Save
+                                      </Button>
+                                      <Button
+                                        className=""
+                                        variant={"outline"}
+                                        onClick={() => {
+                                          setIsReplyEditing(null);
+                                          setReplyEditContent("");
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div
+                                    className={cn("px-1  rounded text-bg-gray-600  whitespace-pre-wrap ",replyDelete ? "cursor-not-allowed" : "")}
+                                    dangerouslySetInnerHTML={{
+                                      __html: comReply.comment_text,
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
               </div>
