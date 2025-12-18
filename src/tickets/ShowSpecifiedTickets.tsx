@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { type TicketType } from "./hooks/UseTickets";
+import { UseTickets, type TicketType } from "./hooks/UseTickets";
 // import {
 //   Menubar,
 //   MenubarContent,
@@ -46,39 +46,53 @@ import OpenTicket from "./openTicket/OpenTicket";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BoardWorkflowAPI } from "@/UserProfile/boardWorkflowAPI/BoardWorkflowAPI";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+import type { TicketUpdateFormDataType } from "./updateTicket/UpdateTicket";
+import { CSS } from "@dnd-kit/utilities";
 
 interface SpecifiedTicketsProps {
-  item: TicketDetails;
-  isDragging?: boolean;
+  itemTkt: TicketDetails;
+
   allTickets: TicketDetails[];
   usersData?: UsersDataType[];
 }
 const ShowSpecifiedTickets = ({
-  item,
-  isDragging,
+  itemTkt,
+
   allTickets,
   usersData,
 }: SpecifiedTicketsProps) => {
+  const [item, setItem] = useState<TicketDetails>(itemTkt);
   const [parentTicket, setParentTicket] = useState<TicketDetails>();
   const [childTickets, setChildTicket] = useState<TicketDetails[]>([]);
   const [assignName, setAssigneeName] = useState<string>("");
-  const [draggedTicket, setDraggedTicket] = useState<TicketDetails | null>(null);
+  const [draggedTicket, setDraggedTicket] = useState<TicketDetails | null>(
+    null
+  );
 
   const navigate = useNavigate();
 
-  const { GetUsers } = BoardWorkflowAPI();
+  const { EditTicket, GetTicketHistory } = UseTickets();
 
-  const date = item.start_date ? new Date(item.start_date) : null;
+  const date = itemTkt.start_date ? new Date(itemTkt.start_date) : null;
   const options: Intl.DateTimeFormatOptions = {
     month: "short",
     day: "2-digit",
   };
   const formatted = date ? date.toLocaleDateString("en-US", options) : null;
   // draggable
-  const { attributes, setNodeRef, listeners, transform } = useDraggable({
-    id: item.id,
-  });
+  const { attributes, setNodeRef, listeners, transform, isDragging } =
+    useDraggable({
+      id: item.id,
+    });
+
+
+
 
   function copyTicketId(tktId: string) {
     navigator.clipboard
@@ -116,6 +130,48 @@ const ShowSpecifiedTickets = ({
       );
     }
   }, []);
+  // this is only for updating assinee from the tickets page
+  const handleEnter = async (
+    tktDetails: TicketDetails,
+    name?: string,
+    value?: string | number
+  ) => {
+    if (!tktDetails) return;
+    const updatedData: TicketUpdateFormDataType & { [key: string]: any } = {
+      ticket_status: tktDetails?.ticket_status,
+      ticket_state: tktDetails?.ticket_state,
+      ticket_severity: tktDetails?.ticket_severity,
+      summary: tktDetails?.summary,
+      description: tktDetails.description,
+      file_attachment: tktDetails?.file_attachment,
+      comment: tktDetails?.comment,
+      start_date: tktDetails?.start_date,
+      due_date: tktDetails?.due_date,
+      assignee_id: tktDetails?.assignee_id,
+      reporter_id: tktDetails?.reporter_id,
+      update_id: Number(tktDetails.id),
+      parent_ticket_id: String(tktDetails.parent_ticket_id),
+    };
+    if (name && value !== undefined) {
+      updatedData[name] = value;
+    }
+    console.log(updatedData);
+    const res = await EditTicket(updatedData, [], String(tktDetails?.id));
+    console.log("res", res);
+
+    // setAllTickets(res?.tickets)
+
+    if (res?.status === 200 && res?.data.status) {
+      // setTicketDetails(res.data);
+      setItem((prev) => ({ ...prev, assignee_id: String(value) }));
+      toast.success(res.data.message);
+
+      // Also refresh ticket history
+      const tktHistory = await GetTicketHistory({
+        ticket_id: String(tktDetails.id),
+      });
+    }
+  };
 
   const formatTimeAgo = (dateStr: string) => {
     const now = new Date();
@@ -141,28 +197,31 @@ const ShowSpecifiedTickets = ({
     if (seconds >= 1) return `${seconds} second${seconds > 1 ? "s" : ""} ago`;
   };
 
-  
-
   return (
     <>
-      <motion.div
+      <div
         ref={setNodeRef}
         {...listeners}
         {...attributes}
+        // style={{
+        //   transform: transform
+        //     ? `translate(${transform.x}px, ${transform.y}px)`
+        //     : undefined,
+        //   zIndex: isDragging ? 9999 : "auto",
+        // }}
+        // animate={{
+        //   scale: isDragging ? 1.05 : 1,
+        //   rotate: isDragging ? 3 : 0,
+        // }}
+        // transition={{
+        //   type: "spring",
+        //   stiffness: 500,
+        //   damping: 50,
+        // }}
         style={{
-          transform: transform
-            ? `translate(${transform.x}px, ${transform.y}px)`
-            : undefined,
+          transform: CSS.Transform.toString(transform),
+          willChange: "transform",
           zIndex: isDragging ? 9999 : "auto",
-        }}
-        animate={{
-          scale: isDragging ? 1.05 : 1,
-          rotate: isDragging ? 3 : 0,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 500,
-          damping: 50,
         }}
         className="w-full px-2 cursor-pointer flex gap-1"
       >
@@ -180,6 +239,16 @@ const ShowSpecifiedTickets = ({
           // {...listeners}
           // {...attributes}
           // style={style}
+          // style={{
+          //   opacity: isDragging ? 0 : 1,
+          //   pointerEvents: isDragging ? "none" : "auto",
+          // }}
+
+           style={{
+    transform: isDragging ? "scale(1.03)" : "scale(1)",
+    transition: "transform 120ms ease",
+    opacity: isDragging ? 0 : 1,
+  }}
         >
           <div className="w-full flex justify-between">
             <div className="flex w-fit h-full gap-2">
@@ -311,50 +380,44 @@ const ShowSpecifiedTickets = ({
             <div className=" w-full flex items-center text-sm text-gray-900 dark:text-white">
               <div>
                 <Select
-                //  onValueChange={(val) => {
-                //               const user = usersData?.find(
-                //                 (user) => String(user.id) === String(val)
-                //               );
-                //               setAssigneeDetails(
-                //                 `${user?.first_name} ${user?.last_name}`
-                //               );
-                //               handleEnter(ticketDetails, "assignee_id", val);
-                //               console.log("assgnee val", val);
-                //             }}
-                             >
-                 <SelectTrigger className="p-0 text-xs border-0 [&>svg]:hidden cursor-pointer">
-                <Avatar>
-                  <AvatarFallback>
-                    {item.assignee_id ? (
-                      <span className="uppercase font-bold text-lg">
-                        {assignName
-                          .split(" ")
-                          .map((ass) => ass[0])
-                          .join("")}
-                      </span>
-                    ) : (
-                      <FontAwesomeIcon icon={faUser} size="lg" />
-                    )}
-                  </AvatarFallback>
-                </Avatar>
+                  onValueChange={(val) => {
+                    const user = usersData?.find(
+                      (user) => String(user.id) === String(val)
+                    );
+                    setAssigneeName(`${user?.first_name} ${user?.last_name}`);
+                    handleEnter(item, "assignee_id", val);
+                    console.log("assgnee val", val);
+                  }}
+                >
+                  <SelectTrigger className="p-0 text-xs border-0 [&>svg]:hidden cursor-pointer">
+                    <Avatar>
+                      <AvatarFallback>
+                        {item.assignee_id ? (
+                          <span className="uppercase font-bold text-lg">
+                            {assignName
+                              .split(" ")
+                              .map((ass) => ass[0])
+                              .join("")}
+                          </span>
+                        ) : (
+                          <FontAwesomeIcon icon={faUser} size="lg" />
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
+                  </SelectTrigger>
 
-
-                                            
-                                            </SelectTrigger>
-                
-                                            <SelectContent  side="left"
-                                                  align="center"
-                                            className="w-[180px]">
-                                              {usersData?.map((user) => (
-                                                <SelectItem
-                                                  key={user.id}
-                                                  value={String(user.id)}
-                                                >
-                                                  {user.first_name} {user.last_name}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
+                  <SelectContent
+                    side="left"
+                    align="center"
+                    className="w-[180px]"
+                  >
+                    {usersData?.map((user) => (
+                      <SelectItem key={user.id} value={String(user.id)}>
+                        {user.first_name} {user.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <span
                 className=" cursor-pointer  flex flex-col"
@@ -442,7 +505,7 @@ const ShowSpecifiedTickets = ({
             </div>
           </CardFooter>
         </Card>
-      </motion.div>
+      </div>
     </>
   );
 };

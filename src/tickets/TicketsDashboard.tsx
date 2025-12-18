@@ -37,7 +37,7 @@ export interface ColumnsType {
 const TicketsDashboard = () => {
   const [allTickets, setAllTickets] = useState<TicketDetails[]>([]);
   const [noTkts, setNoTkts] = useState<boolean>(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  // const [activeId, setActiveId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"kanban" | "table" | "gantt">(
     "kanban"
   );
@@ -97,16 +97,38 @@ const TicketsDashboard = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // only start drag if mouse moves 5px
+        distance: 12, // only start drag if mouse moves 5px
       },
     })
   );
-  console.log("alltkts", allTickets);
+  // console.log("alltkts", allTickets);
 
   const kanbanTkts = useMemo(
     () => allTickets.filter((t: TicketDetails) => t.type !== "milestone"),
     [allTickets]
   );
+
+  const ticketsByColumn = useMemo(() => {
+  const map: Record<string, TicketDetails[]> = {};
+  Columns.forEach(c => (map[c] = []));
+
+  for (const t of kanbanTkts) {
+    map[t.ticket_state]?.push(t);
+  }
+
+  Object.values(map).forEach(list =>
+    list.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() -
+        new Date(a.created_at).getTime()
+    )
+  );
+
+  return map;
+}, [kanbanTkts]);
+
+
+  
 
   const views = {
     table: (
@@ -127,7 +149,7 @@ const TicketsDashboard = () => {
           onDragEnd={handleDragEnd}
           onDragStart={(event) => {
             const id = String(event.active.id);
-            setActiveId(id);
+            // setActiveId(id);
             const ticket = kanbanTkts.find((t) => String(t.id) === id);
             setDraggedTicket(ticket || null);
           }}
@@ -149,19 +171,19 @@ const TicketsDashboard = () => {
         })} */}
 
           {Columns.map((column, idx) => {
-            const columnTickets = useMemo(
-              () =>
-                kanbanTkts.filter(
-                  (ticket: TicketDetails) => ticket.ticket_state === column
-                ).sort((a,b)=>new Date(b.created_at).getTime()- new Date(a.created_at).getTime()),
-              [kanbanTkts, column]
-            );
+            // const columnTickets = useMemo(
+            //   () =>
+            //     kanbanTkts.filter(
+            //       (ticket: TicketDetails) => ticket.ticket_state === column
+            //     ).sort((a,b)=>new Date(b.created_at).getTime()- new Date(a.created_at).getTime()),
+            //   [kanbanTkts, column]
+            // );
             return (
               <DisplayTickets
                 key={column}
                 column={column}
-                activeId={activeId}
-                tickets={columnTickets}
+                // activeId={activeId}
+                tickets={ticketsByColumn[column]}
                 allTickets={kanbanTkts}
                 usersData={usersData}
               />
@@ -181,9 +203,9 @@ const TicketsDashboard = () => {
           </DragOverlay> */}
 
           <DragOverlay dropAnimation={null}>
-            {activeId && draggedTicket ? (
+            { draggedTicket ? (
               <ShowSpecifiedTickets
-                item={draggedTicket}
+                itemTkt={draggedTicket}
                 allTickets={[]} 
                 usersData={usersData}
               />
@@ -227,12 +249,12 @@ const TicketsDashboard = () => {
     const newState = String(over.id);
 
     if (oldTicket.ticket_state === newState) {
-      setActiveId(null);
+      // setActiveId(null);
       setDraggedTicket(null);
       return;
     }
     if(oldTicket.ticket_state === 'Cancelled' && newState !== 'Re Open'){
-      setActiveId(null)
+      // setActiveId(null)
       setDraggedTicket(null);
       toast.warning("Cancelled ticket will drag to Re Open State only!")
       return
@@ -248,7 +270,7 @@ const TicketsDashboard = () => {
     );
 
     // setTimeout(() => setActiveId(null), 0);
-    setActiveId(null);
+    // setActiveId(null);
     setDraggedTicket(null);
 
     // update object

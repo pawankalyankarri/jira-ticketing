@@ -144,6 +144,7 @@ const OpenTicket = () => {
   const [collabDialog, setCollabDialog] = useState<boolean>(false);
   const [updateSummary, setUpdateSummary] = useState<string>("");
   const summaryRef = useRef<HTMLTextAreaElement | null>(null);
+  const [labelText,setLableText] = useState<string>("")
 
   const navigate = useNavigate();
   const {
@@ -512,8 +513,9 @@ const OpenTicket = () => {
         setOpen(val);
         console.log("value", val);
         if (!val) {
-          window.dispatchEvent(new Event("ticketsUpdated"));
           navigate("/tickets");
+          window.dispatchEvent(new Event("ticketsUpdated"));
+         
 
         }
       }}
@@ -662,8 +664,9 @@ const OpenTicket = () => {
                   className="float-right p-1.5 bg-gray-300 rounded"
                   onClick={() => {
                     setOpen(false);
-                    window.dispatchEvent(new Event("ticketsUpdated"));
                     navigate("/tickets");
+                    window.dispatchEvent(new Event("ticketsUpdated"));
+                    
                   }}
                 >
                   <FontAwesomeIcon
@@ -1402,6 +1405,7 @@ const OpenTicket = () => {
                       <span className="border border-gray-500  p-1 rounded">
                         None
                       </span>
+                      {/* <Input  value={ticketDetails.label} onChange={(e)=>setTicketDetails((prev)=>({...prev,label : e.target.value }))}/> */}
                     </div>
                     <div className="grid grid-cols-2">
                       <Label className="flex items-center">Milestone</Label>

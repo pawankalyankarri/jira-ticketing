@@ -133,6 +133,7 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
           onValueChange={(value: string) =>
             setLocalTask((prev)=>({ ...prev, type: value }))
           }
+          disabled= {localTask.type === 'milestone'}
         >
           <SelectTrigger className="w-full  transition-colors hover:bg-gray-50 bg-white dark:hover:bg-white">
             <SelectValue placeholder="Select task type" />
@@ -145,7 +146,7 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
               // } 
               return (
               
-              <SelectItem key={idx} value={t} disabled = {typeof localTask.id === 'number' && t === 'milestone'}>
+              <SelectItem key={idx} value={t} hidden = {typeof localTask.id === 'number' && t === 'milestone'}>
                 {t}
               </SelectItem>
             )})}
@@ -154,7 +155,8 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
       </div>
 
     {localTask.type !== "milestone" && 
-      (<div><div className="mb-4">
+      (<div>
+        <div className="mb-4">
         <Label className="block mb-1 font-medium">State</Label>
         <Select
           value={localTask.ticket_state}
@@ -162,6 +164,7 @@ export function Form({ task, taskTypes, onAction,taskState }: FormProps) {
             setLocalTask((prev)=>({...prev, ticket_state: value }))
           }
           required
+          disabled = {localTask.type === 'milestone'}
         >
           <SelectTrigger className="w-full transition-colors hover:bg-gray-50 bg-white dark:hover:bg-white">
             <SelectValue placeholder="Select Task State" />
