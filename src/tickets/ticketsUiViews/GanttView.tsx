@@ -156,13 +156,18 @@ const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
   const mappedTasks: GanttTicket[] = [];
   let virtualIdCounter = -1;
 
-  tickets.forEach((ticket) => {
-    
-    if (ticket.type === 'milestone') {
-      return;
-    }
+  // SORT BY CREATED DATE (latest first)
+  const sortedTickets = [...tickets].sort((a, b) => {
+    return (
+      new Date(b.updated_at).getTime() -
+      new Date(a.updated_at).getTime()
+    );
+  });
 
-    // Add the main ticket
+  sortedTickets.forEach((ticket) => {
+    if (ticket.type === "milestone") return;
+
+    // Main ticket
     mappedTasks.push({
       id: ticket.id,
       text: ticket.summary,
@@ -177,17 +182,15 @@ const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
       ticket_severity: ticket.ticket_severity,
     });
 
-    // If this ticket has a milestone, create a unique instance for this ticket
+    // Milestone mapping
     if (ticket.milestone_id) {
       const milestone = tickets.find(
         (t) => String(t.id) === String(ticket.milestone_id)
       );
 
       if (milestone) {
-        // Create a virtual milestone with a unique id
-        // This allows the same milestone to appear under multiple parents
         mappedTasks.push({
-          id: virtualIdCounter--, // virtual unique id negative values
+          id: virtualIdCounter--,
           text: milestone.summary,
           start: milestone.start_date
             ? new Date(milestone.start_date)
@@ -195,15 +198,14 @@ const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
           end: milestone.due_date
             ? new Date(milestone.due_date)
             : new Date(),
-          parent: ticket.id, // this milestone is a child of this ticket
+          parent: ticket.id,
           progress: milestone.progress,
-          original_id : milestone.id,
+          original_id: milestone.id,
           type: milestone.type ?? "milestone",
           details: milestone.description,
           ticket_state: milestone.ticket_state,
           ticket_status: milestone.ticket_status,
           ticket_severity: milestone.ticket_severity,
-
         });
       }
     }
@@ -212,6 +214,68 @@ const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
   return mappedTasks;
 };
 
+
+
+// const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
+//   const mappedTasks: GanttTicket[] = [];
+//   let virtualIdCounter = -1;
+
+//   tickets.forEach((ticket) => {
+    
+//     if (ticket.type === 'milestone') {
+//       return;
+//     }
+
+//     // Add the main ticket
+//     mappedTasks.push({
+//       id: ticket.id,
+//       text: ticket.summary,
+//       start: ticket.start_date ? new Date(ticket.start_date) : new Date(),
+//       end: ticket.due_date ? new Date(ticket.due_date) : new Date(),
+//       progress: ticket.progress,
+//       parent: ticket.parent_ticket_id ? Number(ticket.parent_ticket_id) : 0,
+//       type: ticket.type?.toLowerCase(),
+//       details: ticket.description,
+//       ticket_state: ticket.ticket_state,
+//       ticket_status: ticket.ticket_status,
+//       ticket_severity: ticket.ticket_severity,
+//     });
+
+//     // If this ticket has a milestone, create a unique instance for this ticket
+//     if (ticket.milestone_id) {
+//       const milestone = tickets.find(
+//         (t) => String(t.id) === String(ticket.milestone_id)
+//       );
+
+//       if (milestone) {
+//         // Create a virtual milestone with a unique id
+//         // This allows the same milestone to appear under multiple parents
+//         mappedTasks.push({
+//           id: virtualIdCounter--, // virtual unique id negative values
+//           text: milestone.summary,
+//           start: milestone.start_date
+//             ? new Date(milestone.start_date)
+//             : new Date(),
+//           end: milestone.due_date
+//             ? new Date(milestone.due_date)
+//             : new Date(),
+//           parent: ticket.id, // this milestone is a child of this ticket
+//           progress: milestone.progress,
+//           original_id : milestone.id,
+//           type: milestone.type ?? "milestone",
+//           details: milestone.description,
+//           ticket_state: milestone.ticket_state,
+//           ticket_status: milestone.ticket_status,
+//           ticket_severity: milestone.ticket_severity,
+
+//         });
+//       }
+//     }
+//   });
+
+//   return mappedTasks;
+// };
+{""}
 
   const generateSubtaskLinks = (tickets: GanttTicket[]): LinksType[] => {
     const links: LinksType[] = [];
@@ -246,6 +310,10 @@ const mapTicketsToTasks = (tickets: TicketDetails[]): GanttTicket[] => {
 
     return links;
   };
+
+  
+
+
 
 
 //   const generateSubtaskLinks = (tickets: GanttTicket[]): LinksType[] => {
@@ -519,7 +587,8 @@ useEffect(() => {
             const updated = {...parent!,milestone_id : String(m_id), update_id: Number(m_obj.parent_ticket_id)}
             const response = await EditTicket(updated,[],m_obj.parent_ticket_id)
             console.log('response of milestone parent =====>',response)
-            await GetTickets()
+            // await GetTickets()
+            window.dispatchEvent(new Event("ticketsUpdated"));
 
 
             
@@ -582,6 +651,7 @@ useEffect(() => {
       if (!moved) return;
        if(moved.type === 'milestone'){
         toast.warning("Unable to drag the milestones!")
+        await GetTickets()
         return;
       }
 
@@ -647,9 +717,9 @@ useEffect(() => {
       let originalTicket ;
 
       if(task.id>0){
-        originalTicket = allTickets.find((t) => t.id === task.id);
+        originalTicket = allTickets.find((t) => String(t.id) === String(task.id));
       }else{
-        originalTicket = allTickets.find((t) => t.id === task.original_id);
+        originalTicket = allTickets.find((t) => String(t.id) === String(task.original_id));
 
       }
       console.log('original',originalTicket)
@@ -805,7 +875,7 @@ useEffect(() => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col h-full w-full "
+      className="flex flex-col h-full w-full  "
       // className="flex flex-col h-full min-h-0"
     >
       <div className="flex-1 flex flex-col h-full ">

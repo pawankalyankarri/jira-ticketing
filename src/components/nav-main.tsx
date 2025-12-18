@@ -49,7 +49,7 @@ export function NavMain({
             key={item.title}
             asChild
             defaultOpen={item.isActive}
-            className="group/collapsible"
+            className="group/collapsible box-border"
           >
             <SidebarMenuItem>
               <CollapsibleTrigger asChild>
@@ -59,12 +59,12 @@ export function NavMain({
                       to={item?.navigate ? item.navigate : ""}
                       className={({ isActive }) =>
                         cn(
-                          "w-full flex gap-2 items-center p-1 rounded ",
-                          isActive ? "bg-blue-200" : ""
+                          "w-full flex gap-2 items-center p-0.5 rounded ",
+                          isActive ? "bg-blue-200": ""
                         )
                       }
                     >
-                      {item.icon && <FontAwesomeIcon icon={item.icon} />}
+                      {item.icon && <FontAwesomeIcon icon={item.icon}  />}
                       <span className="font-bold uppercase">{item.title}</span>
                     </NavLink>
                   ) : (

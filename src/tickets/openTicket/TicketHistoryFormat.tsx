@@ -475,6 +475,9 @@ const TicketHistoryFormat = ({
 
      case "Assignee":
       if(tdata.old_value){
+        const oldUser = usersData.find(u=>String(u.id) === String(tdata.old_value))
+        const newUser = usersData.find(u=>String(u.id) === String(tdata.new_value))
+        console.log('olduser=>',oldUser,newUser)
         return(
             <div className="flex justify-between  gap-2 w-full p-1 ">
             <div className="flex  w-full gap-2 items-center a">
@@ -497,12 +500,12 @@ const TicketHistoryFormat = ({
 
                   <div className="w-full flex gap-3 items-center">
                     
-                    <span className="   px-2 py-1 text-gray-950 font-bold ">
-                      {tdata.old_value}
+                    <span className="   px-2 py-1 text-gray-950 font-bold capitalize">
+                      {`${oldUser?.first_name} ${oldUser?.last_name}`}
                     </span>
                     <FontAwesomeIcon icon={faRightLong} />
-                    <span className="  px-1.5 py-1 text-blue-950 font-bold">
-                      {tdata.new_value}
+                    <span className="  px-1.5 py-1 text-blue-950 font-bold capitalize">
+                      {`${newUser?.first_name} ${newUser?.last_name}`}
                     </span>
                   </div>
                 </div>
@@ -533,7 +536,7 @@ const TicketHistoryFormat = ({
                   <div className=" w-full">
                     <strong className="capitalize">
                       {tdata.changed_by || "user"}
-                    </strong>{" "}
+                    </strong>
                     changed the <strong>{tdata.field_name}</strong> to 
                   </div>
 

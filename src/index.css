@@ -157,3 +157,22 @@
   pointer-events: auto;
 }
 
+
+/* Timeline header */
+.gantt_task_scale,
+.gantt_grid_scale {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: white;
+}
+
+/* Prevent parent from hiding sticky */
+.gantt-container,
+.gantt_task {
+  overflow: visible !important;
+}
+
+
+
+

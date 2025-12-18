@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
@@ -20,21 +19,30 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { TicketDetails, UsersDataType } from "./ticketInterfaces/TicketInterfaces";
+import type {
+  TicketDetails,
+  UsersDataType,
+} from "./ticketInterfaces/TicketInterfaces";
 import ShowSpecifiedTickets from "./ShowSpecifiedTickets";
+import { useSortable } from "@dnd-kit/sortable";
 
 interface ColumnTypeProp {
   column: string;
   tickets: TicketDetails[];
-  activeId?: string | null;
-  allTickets : TicketDetails[]
-  usersData : UsersDataType[]
+
+  allTickets: TicketDetails[];
+  usersData: UsersDataType[];
 }
 
-const DisplayTicket = ({ column, tickets, activeId,allTickets,usersData }: ColumnTypeProp) => {
+const DisplayTicket = ({
+  column,
+  tickets,
+  allTickets,
+  usersData,
+}: ColumnTypeProp) => {
   const [activeColumn, setActiveColumn] = useState<string>("");
   const [newTodo, setNewTodo] = useState<string>("");
-  const { setNodeRef, isOver } = useDroppable({
+  const { setNodeRef, isOver } = useSortable({
     id: column,
   });
   const textareaRef = useRef<HTMLDivElement>(null);
@@ -91,27 +99,7 @@ const DisplayTicket = ({ column, tickets, activeId,allTickets,usersData }: Colum
     };
   }, [activeColumn]);
 
-  // const columnTextColors: Record<string, string> = {
-  //   ToDo: "text-gray-500 ",
-  //   InProgress: "text-blue-500",
-  //   Cancelled: "text-red-500",
-  //   Resolved: "text-green-500",
-  //   OnHold: "text-orange-500",
-  // };
-  // const columBgColors: Record<string, string> = {
-  //   ToDo: "bg-gray-500 outline-gray-100 ",
-  //   InProgress: "bg-blue-500 outline-blue-100",
-  //   Cancelled: "bg-red-500",
-  //   Resolved: "bg-green-500",
-  //   OnHold: "bg-orange-500",
-  // };
-  // const columnColors: Record<string, string> = {
-  //   ToDo: "bg-gray-50/20",
-  //   InProgress: "bg-blue-50/20",
-  //   Cancelled: "bg-red-50/20",
-  //   Resolved: "bg-green-50/20",
-  //   OnHold: "bg-orange-50/20",
-  // };
+
   return (
     <div
       className={cn(
@@ -142,24 +130,8 @@ const DisplayTicket = ({ column, tickets, activeId,allTickets,usersData }: Colum
           </div>
         </div>
       </Card>
-      <div className="flex flex-col h-[calc(100%-60px)] p-1 overflow-auto thin-scrollbar gap-1">
-        {/* <div className="w-full px-2">
-          {activeColumn === column && (
-            <div
-              className="bg-white rounded-md border-2 border-blue-500 min-h-28 "
-              ref={textareaRef}
-            >
-              <Textarea
-                className="resize-none border-0 outline-0 min-h-28 max-h-28 overflow-y-auto thin-scrollbar1 "
-                value={newTodo}
-                onChange={(e) => setNewTodo(e.target.value)}
-                onKeyDown={handleKeydown}
-              />
-
-              
-            </div>
-          )}
-        </div> */}
+      <div className="flex flex-col h-[calc(100%-60px)] p-1 overflow-y-auto overflow-x-hidden thin-scrollbar gap-1">
+        
 
         <div className="w-full px-2" ref={textareaRef}>
           {activeColumn === column && (
@@ -174,7 +146,7 @@ const DisplayTicket = ({ column, tickets, activeId,allTickets,usersData }: Colum
           )}
         </div>
 
-        {tickets
+        {/* {tickets
           .filter((item) => String(item.id) !== String(activeId)) // hide the card being dragged
           .map((item: TicketDetails) => {
             return (
@@ -191,14 +163,23 @@ const DisplayTicket = ({ column, tickets, activeId,allTickets,usersData }: Colum
               // >
                 <ShowSpecifiedTickets
                 key={item.id}
-                  item={item}
+                  itemTkt={item}
                   allTickets={allTickets}
                   usersData = {usersData}
                   // isDragging={activeId === String(item.id)}
                 />
               // </motion.div>
             );
-          })}
+          })} */}
+
+        {tickets.map((item) => (
+          <ShowSpecifiedTickets
+            key={item.id}
+            itemTkt={item}
+            allTickets={allTickets}
+            usersData={usersData}
+          />
+        ))}
       </div>
     </div>
   );
